@@ -4,7 +4,7 @@ const SUPABASE_PUBLISHABLE_KEY =
   process.env.SUPABASE_PUBLISHABLE_KEY ||
   "sb_publishable_QnlhzDiZqQyV1DSf_uKUVA_0XuNS6LN";
 
-async function getAdminUser(authorization) {
+async function getAuthenticatedUser(authorization) {
   if (!authorization?.startsWith("Bearer ")) return null;
 
   const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
@@ -14,21 +14,7 @@ async function getAdminUser(authorization) {
     },
   });
   if (!userResponse.ok) return null;
-
-  const user = await userResponse.json();
-  const profileResponse = await fetch(
-    `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=role&limit=1`,
-    {
-      headers: {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        Authorization: authorization,
-      },
-    },
-  );
-  if (!profileResponse.ok) return null;
-
-  const profiles = await profileResponse.json();
-  return profiles[0]?.role === "admin" ? user : null;
+  return userResponse.json();
 }
 
 function cleanText(value) {
@@ -75,9 +61,9 @@ module.exports = async function handler(request, response) {
       .json({ message: "GET 요청만 사용할 수 있습니다." });
   }
 
-  const admin = await getAdminUser(request.headers.authorization);
-  if (!admin) {
-    return response.status(403).json({ message: "관리자 권한이 필요합니다." });
+  const user = await getAuthenticatedUser(request.headers.authorization);
+  if (!user) {
+    return response.status(401).json({ message: "로그인이 필요합니다." });
   }
   if (!process.env.KAKAO_REST_API_KEY) {
     return response.status(503).json({

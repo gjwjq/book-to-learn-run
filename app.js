@@ -285,6 +285,8 @@ let currentUserCache = null;
 let booksCache = mockBooks;
 let loansCache = [];
 let adminBookImportResults = [];
+let userBookSearchResults = [];
+let myBookRequestsCache = [];
 const ADMIN_BOOK_DRAFT_PREFIX = "btlr_admin_book_draft";
 const ADMIN_BOOK_DRAFT_DB = "btlr-admin-drafts";
 
@@ -305,6 +307,7 @@ async function initApp() {
     login: initLoginPage,
     mypage: initMyPage,
     admin: initAdminPage,
+    request: initBookRequestPage,
   };
 
   if (pageInitializers[page]) {
@@ -960,6 +963,20 @@ function renderAuthArea() {
       `;
     }
   });
+
+  document.querySelectorAll(".main-nav .nav-inner").forEach((navigation) => {
+    const existingLink = navigation.querySelector(".request-nav-link");
+    if (user?.role === "member" && !existingLink) {
+      const link = document.createElement("a");
+      link.className = "request-nav-link";
+      link.href = "request.html";
+      link.textContent = "도서 추가 요청";
+      const myPageLink = navigation.querySelector('a[href="mypage.html"]');
+      navigation.insertBefore(link, myPageLink || navigation.querySelector(".nav-message"));
+    } else if (user?.role !== "member" && existingLink && getCurrentPage() !== "request") {
+      existingLink.remove();
+    }
+  });
 }
 
 function handleGlobalActions() {
@@ -1392,9 +1409,14 @@ async function initAdminPage() {
 
   if (content) content.hidden = false;
   await seedDefaultBooksIfEmpty();
-  await Promise.all([renderAdminUsers(), renderAdminBooks()]);
+  await Promise.all([
+    renderAdminUsers(),
+    renderAdminBooks(),
+    renderAdminBookRequests(),
+  ]);
 
   document.getElementById("refresh-users")?.addEventListener("click", renderAdminUsers);
+  document.getElementById("refresh-book-requests")?.addEventListener("click", renderAdminBookRequests);
   document.getElementById("reset-book-create")?.addEventListener("click", resetAdminBookForm);
   document.getElementById("admin-book-form")?.addEventListener("submit", saveAdminBook);
   document.getElementById("admin-book-edit-form")?.addEventListener("submit", saveAdminBook);
@@ -1402,6 +1424,7 @@ async function initAdminPage() {
   document.getElementById("cancel-book-edit")?.addEventListener("click", closeAdminBookDialog);
   document.getElementById("admin-user-list")?.addEventListener("click", handleAdminUserAction);
   document.getElementById("admin-book-list")?.addEventListener("click", handleAdminBookAction);
+  document.getElementById("admin-book-request-list")?.addEventListener("click", handleAdminBookRequestAction);
   document.getElementById("book-import-search-form")?.addEventListener("submit", searchBooksForImport);
   document.getElementById("book-import-select-all")?.addEventListener("change", toggleAllImportBooks);
   document.getElementById("book-import-submit")?.addEventListener("click", importSelectedBooks);
@@ -1516,6 +1539,24 @@ function setBookImportMessage(message, success = false) {
   target.classList.toggle("success", success);
 }
 
+async function fetchExternalBooks(query, category, size) {
+  const { data: sessionData } = await window.btlrSupabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) throw new Error("로그인이 필요합니다.");
+
+  const params = new URLSearchParams({
+    query,
+    category,
+    size: String(size),
+  });
+  const response = await fetch(`/api/search-books?${params}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || "도서 검색에 실패했습니다.");
+  return result;
+}
+
 async function searchBooksForImport(event) {
   event.preventDefault();
   const form = event.currentTarget;
@@ -1536,25 +1577,8 @@ async function searchBooksForImport(event) {
   if (button) button.disabled = true;
   setBookImportMessage("카카오 도서 API에서 검색하고 있습니다...");
 
-  const { data: sessionData } = await window.btlrSupabase.auth.getSession();
-  const accessToken = sessionData.session?.access_token;
-  if (!accessToken) {
-    if (button) button.disabled = false;
-    setBookImportMessage("관리자 로그인이 필요합니다.");
-    return;
-  }
-
   try {
-    const params = new URLSearchParams({
-      query,
-      category,
-      size: String(size),
-    });
-    const response = await fetch(`/api/search-books?${params}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.message || "도서 검색에 실패했습니다.");
+    const result = await fetchExternalBooks(query, category, size);
 
     adminBookImportResults = Array.isArray(result.books) ? result.books : [];
     renderBookImportResults(result.totalCount);
@@ -1694,6 +1718,76 @@ async function importSelectedBooks() {
   await renderAdminBooks();
   renderBookImportResults(adminBookImportResults.length);
   setBookImportMessage(`${booksToInsert.length}권을 도서 목록에 추가했습니다.`, true);
+}
+
+async function renderAdminBookRequests() {
+  const target = document.getElementById("admin-book-request-list");
+  if (!target || !window.btlrSupabase) return;
+  target.innerHTML = '<p class="admin-empty">요청 목록을 불러오는 중...</p>';
+
+  const { data, error } = await window.btlrSupabase.rpc("admin_list_book_requests");
+  if (error) {
+    target.innerHTML = `<p class="admin-empty">${escapeHTML(error.message)}</p>`;
+    return;
+  }
+
+  if (!data?.length) {
+    target.innerHTML = '<div class="request-empty"><span>✓</span><strong>처리할 도서 요청이 없습니다.</strong></div>';
+    return;
+  }
+
+  target.innerHTML = data.map((request) => `
+    <article class="admin-request-card">
+      <div class="admin-request-cover">
+        ${request.thumbnail
+          ? `<img src="${escapeHTML(request.thumbnail)}" alt="${escapeHTML(request.title)} 표지" />`
+          : '<span class="cover-fallback" aria-hidden="true">B</span>'}
+      </div>
+      <div class="admin-request-copy">
+        <span class="request-status status-pending">승인 대기</span>
+        <h4>${escapeHTML(request.title)}</h4>
+        <p>${escapeHTML(request.author)}${request.publisher ? ` · ${escapeHTML(request.publisher)}` : ""}</p>
+        <small>${escapeHTML(request.category || "기타")} · 요청자 ${escapeHTML(request.requester_name || request.requester_login_id || request.requester_email || "회원")} · ${formatDate(request.requested_at)}</small>
+      </div>
+      <div class="admin-row-actions">
+        <button class="table-action" type="button" data-book-request-action="approve" data-request-id="${request.request_id}">추가 승인</button>
+        <button class="table-action danger" type="button" data-book-request-action="reject" data-request-id="${request.request_id}" data-request-title="${escapeHTML(request.title)}">거절</button>
+      </div>
+    </article>
+  `).join("");
+}
+
+async function handleAdminBookRequestAction(event) {
+  const button = event.target.closest("[data-book-request-action]");
+  if (!button) return;
+  const requestId = button.dataset.requestId;
+  const action = button.dataset.bookRequestAction;
+
+  if (action === "reject") {
+    const title = button.dataset.requestTitle || "이 도서";
+    if (!window.confirm(`'${title}' 추가 요청을 거절할까요?`)) return;
+  }
+
+  button.disabled = true;
+  const functionName = action === "approve"
+    ? "admin_approve_book_request"
+    : "admin_reject_book_request";
+  const { data, error } = await window.btlrSupabase.rpc(functionName, {
+    target_request_id: requestId,
+  });
+  button.disabled = false;
+
+  if (error) {
+    showToast(error.message);
+    return;
+  }
+
+  showToast(
+    action === "approve"
+      ? `'${data?.title || "요청 도서"}'를 도서 목록에 추가했습니다.`
+      : "도서 추가 요청을 거절했습니다.",
+  );
+  await Promise.all([renderAdminBookRequests(), renderAdminBooks()]);
 }
 
 async function renderAdminBooks() {
@@ -2073,6 +2167,196 @@ async function handleAdminBookAction(event) {
     booksCache = booksCache.filter((item) => item.id !== book.id);
     await renderAdminBooks();
   }
+}
+
+async function initBookRequestPage() {
+  const user = requireLogin();
+  if (!user) return;
+
+  const searchPanel = document.querySelector(".request-search-panel");
+  if (user.role === "admin") {
+    if (searchPanel) {
+      searchPanel.innerHTML = `
+        <div class="request-empty">
+          <span>!</span>
+          <strong>관리자는 회원 요청을 관리하는 계정입니다.</strong>
+          <p>관리자 페이지에서 회원의 도서 요청을 확인해 주세요.</p>
+          <a class="button button-primary" href="admin.html#books">요청 관리로 이동</a>
+        </div>
+      `;
+    }
+    document.querySelector(".my-request-panel")?.setAttribute("hidden", "");
+    return;
+  }
+
+  const form = document.getElementById("user-book-search-form");
+  form?.addEventListener("submit", searchBooksForUserRequest);
+  document.getElementById("user-book-search-results")?.addEventListener("click", submitUserBookRequest);
+  document.getElementById("refresh-my-requests")?.addEventListener("click", loadMyBookRequests);
+  await loadMyBookRequests();
+}
+
+function setUserBookSearchMessage(message, success = false) {
+  const target = document.getElementById("user-book-search-message");
+  if (!target) return;
+  target.textContent = message || "";
+  target.classList.toggle("success", success);
+}
+
+async function searchBooksForUserRequest(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = form.querySelector('button[type="submit"]');
+  const values = Object.fromEntries(new FormData(form).entries());
+  const query = String(values.query || "").trim();
+  const category = String(values.category || "").trim() || query;
+  const size = Math.min(Math.max(Number(values.size) || 20, 1), 30);
+
+  if (!query) {
+    setUserBookSearchMessage("검색어를 입력해 주세요.");
+    return;
+  }
+  if (form.elements.category && !form.elements.category.value.trim()) {
+    form.elements.category.value = category;
+  }
+
+  if (button) button.disabled = true;
+  setUserBookSearchMessage("요청할 책을 검색하고 있습니다...");
+  try {
+    const result = await fetchExternalBooks(query, category, size);
+    userBookSearchResults = Array.isArray(result.books) ? result.books : [];
+    renderUserBookSearchResults();
+    setUserBookSearchMessage(
+      userBookSearchResults.length
+        ? `${userBookSearchResults.length}권을 찾았습니다. 원하는 책을 요청해 주세요.`
+        : "검색 결과가 없습니다. 다른 검색어로 찾아보세요.",
+      userBookSearchResults.length > 0,
+    );
+  } catch (error) {
+    userBookSearchResults = [];
+    renderUserBookSearchResults();
+    setUserBookSearchMessage(error.message);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+function renderUserBookSearchResults() {
+  const target = document.getElementById("user-book-search-results");
+  if (!target) return;
+
+  const existingIdentities = new Set(
+    getBooks().map((book) => normalizeBookIdentity(book.title, book.author)),
+  );
+  const pendingExternalIds = new Set(
+    myBookRequestsCache
+      .filter((request) => request.status === "pending")
+      .map((request) => String(request.external_id || "").toLocaleLowerCase()),
+  );
+
+  target.innerHTML = userBookSearchResults.map((book, index) => {
+    const alreadyExists = existingIdentities.has(normalizeBookIdentity(book.title, book.author));
+    const alreadyRequested = pendingExternalIds.has(String(book.externalId || "").toLocaleLowerCase());
+    const disabled = alreadyExists || alreadyRequested;
+    const buttonText = alreadyExists
+      ? "이미 보유 중"
+      : alreadyRequested
+        ? "요청 완료"
+        : "추가 요청";
+
+    return `
+      <article class="user-request-card ${disabled ? "is-disabled" : ""}">
+        <div class="user-request-cover">
+          ${book.thumbnail
+            ? `<img src="${escapeHTML(book.thumbnail)}" alt="${escapeHTML(book.title)} 표지" loading="lazy" />`
+            : '<span class="cover-fallback" aria-hidden="true">B</span>'}
+        </div>
+        <div class="user-request-copy">
+          <span>${escapeHTML(book.category || "기타")}</span>
+          <h3>${escapeHTML(book.title)}</h3>
+          <p>${escapeHTML(book.author)}${book.publisher ? ` · ${escapeHTML(book.publisher)}` : ""}</p>
+          <small>${escapeHTML(book.shortDescription || "도서 소개가 없습니다.")}</small>
+        </div>
+        <button class="button ${disabled ? "button-secondary is-disabled" : "button-primary"}" type="button" data-request-book-index="${index}" ${disabled ? "disabled" : ""}>${buttonText}</button>
+      </article>
+    `;
+  }).join("");
+}
+
+async function submitUserBookRequest(event) {
+  const button = event.target.closest("[data-request-book-index]");
+  if (!button) return;
+  const book = userBookSearchResults[Number(button.dataset.requestBookIndex)];
+  if (!book) return;
+
+  button.disabled = true;
+  button.textContent = "요청 중...";
+  const { error } = await window.btlrSupabase.rpc("request_book_addition", {
+    request_data: book,
+  });
+
+  if (error) {
+    button.disabled = false;
+    button.textContent = "추가 요청";
+    setUserBookSearchMessage(error.message);
+    return;
+  }
+
+  showToast("도서 추가 요청을 보냈습니다.");
+  await loadMyBookRequests();
+  renderUserBookSearchResults();
+  setUserBookSearchMessage("관리자가 확인한 뒤 도서 목록에 추가합니다.", true);
+}
+
+async function loadMyBookRequests() {
+  const target = document.getElementById("my-book-request-list");
+  const user = getCurrentUser();
+  if (!target || !user || !window.btlrSupabase) return;
+  target.innerHTML = '<p class="request-loading">요청 내역을 불러오는 중...</p>';
+
+  const { data, error } = await window.btlrSupabase
+    .from("book_requests")
+    .select("id, external_id, title, author, publisher, thumbnail, status, requested_at, reviewed_at")
+    .eq("requester_id", user.id)
+    .order("requested_at", { ascending: false });
+
+  if (error) {
+    target.innerHTML = `<p class="request-loading">${escapeHTML(error.message)}</p>`;
+    return;
+  }
+
+  myBookRequestsCache = data || [];
+  renderMyBookRequests();
+}
+
+function renderMyBookRequests() {
+  const target = document.getElementById("my-book-request-list");
+  if (!target) return;
+  if (!myBookRequestsCache.length) {
+    target.innerHTML = '<div class="request-empty"><span>＋</span><strong>아직 요청한 도서가 없습니다.</strong><p>위 검색창에서 원하는 책을 찾아보세요.</p></div>';
+    return;
+  }
+
+  const statusLabels = {
+    pending: "승인 대기",
+    approved: "추가 완료",
+    rejected: "요청 거절",
+  };
+  target.innerHTML = myBookRequestsCache.map((request) => `
+    <article class="my-request-card">
+      <div class="my-request-cover">
+        ${request.thumbnail
+          ? `<img src="${escapeHTML(request.thumbnail)}" alt="" />`
+          : '<span class="cover-fallback" aria-hidden="true">B</span>'}
+      </div>
+      <div>
+        <span class="request-status status-${escapeHTML(request.status)}">${statusLabels[request.status] || request.status}</span>
+        <strong>${escapeHTML(request.title)}</strong>
+        <p>${escapeHTML(request.author)}${request.publisher ? ` · ${escapeHTML(request.publisher)}` : ""}</p>
+        <small>요청일 ${formatDate(request.requested_at)}</small>
+      </div>
+    </article>
+  `).join("");
 }
 
 function initMyPage() {

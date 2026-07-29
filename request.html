@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="BOOK TO LEARN &amp; RUN 도서 추가 요청" />
+    <title>도서 추가 요청 | BOOK TO LEARN &amp; RUN</title>
+    <link rel="icon" href="image/logo.png" type="image/png" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="config.js" defer></script>
+    <script src="supabase-client.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body data-page="request">
+    <a class="skip-link" href="#main-content">본문 바로가기</a>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="index.html" aria-label="BOOK TO LEARN &amp; RUN 홈"><span class="brand-mark" aria-hidden="true"><span></span></span><span class="brand-copy"><strong>BOOK TO LEARN &amp; RUN</strong><small>PUBLIC LIBRARY SERVICE</small></span></a>
+        <form class="header-search" role="search"><label class="sr-only" for="header-search-request">도서 검색</label><input id="header-search-request" name="q" type="search" placeholder="보유 도서 검색" /><button type="submit" aria-label="검색"><span aria-hidden="true">⌕</span><span class="search-text">검색</span></button></form>
+        <div class="auth-area" data-auth-area></div>
+      </div>
+      <nav class="main-nav" aria-label="주요 메뉴"><div class="nav-inner"><a href="index.html">홈</a><a href="search.html">도서검색</a><a class="active request-nav-link" href="request.html">도서 추가 요청</a><a href="mypage.html">마이페이지</a><span class="nav-message">찾는 책이 없다면 입고를 요청해 주세요.</span></div></nav>
+    </header>
+
+    <main id="main-content" class="page-main request-main">
+      <section class="page-hero">
+        <div class="shell"><p class="eyebrow">BOOK REQUEST</p><h1>도서 추가 요청</h1><p>찾는 책을 검색하고 도서관에 추가를 요청해 보세요.</p></div>
+      </section>
+
+      <section class="shell request-content">
+        <section class="request-search-panel">
+          <div class="request-section-heading"><div><p class="eyebrow">SEARCH BOOK API</p><h2>요청할 책 찾기</h2></div></div>
+          <form id="user-book-search-form" class="request-search-form">
+            <div><label for="user-book-query">책 검색</label><input id="user-book-query" name="query" type="search" placeholder="책 제목 또는 저자 입력" required /></div>
+            <div><label for="user-book-category">카테고리</label><input id="user-book-category" name="category" type="text" placeholder="비우면 검색어 사용" /></div>
+            <div><label for="user-book-size">검색 권수</label><select id="user-book-size" name="size"><option value="10">10권</option><option value="20" selected>20권</option><option value="30">30권</option></select></div>
+            <button class="button button-primary" type="submit">검색</button>
+          </form>
+          <p id="user-book-search-message" class="form-message" role="alert"></p>
+          <div id="user-book-search-results" class="user-request-results" aria-live="polite"></div>
+        </section>
+
+        <section class="my-request-panel">
+          <div class="request-section-heading"><div><p class="eyebrow">MY REQUESTS</p><h2>내 도서 요청</h2></div><button id="refresh-my-requests" class="button button-secondary" type="button">새로고침</button></div>
+          <div id="my-book-request-list" class="my-request-list" aria-live="polite"></div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Run&amp;Learn</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

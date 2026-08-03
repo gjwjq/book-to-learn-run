@@ -287,6 +287,7 @@ let loansCache = [];
 let adminBookImportResults = [];
 let userBookSearchResults = [];
 let myBookRequestsCache = [];
+const PRIMARY_ADMIN_EMAIL = "umjunsick6015@gmail.com";
 const ADMIN_BOOK_DRAFT_PREFIX = "btlr_admin_book_draft";
 const ADMIN_BOOK_DRAFT_DB = "btlr-admin-drafts";
 
@@ -1166,12 +1167,7 @@ function initSearchPage() {
   const headerInput = document.querySelector(".header-search input");
 
   if (headerInput) headerInput.value = query;
-  if (
-    categoryFilter &&
-    [...categoryFilter.options].some((option) => option.value === categoryParam)
-  ) {
-    categoryFilter.value = categoryParam;
-  }
+  populateCategoryFilter(categoryFilter, categoryParam);
 
   const statusRadio = document.querySelector(
     `input[name="loan-status"][value="${CSS.escape(statusParam)}"]`,
@@ -1203,8 +1199,8 @@ function initSearchPage() {
     if (count) count.textContent = String(books.length);
     if (activeQuery) {
       activeQuery.hidden = !query;
-      activeQuery.textContent = query
-        ? `검색어 “${query}”와 선택한 조건을 함께 적용한 결과입니다.`
+      activeQuery.innerHTML = query
+        ? `<span>검색어 “${escapeHTML(query)}”와 선택한 조건을 함께 적용 중입니다.</span><a href="search.html">검색어 지우고 전체 도서 보기</a>`
         : "";
     }
     if (results) results.hidden = books.length === 0;
@@ -1212,13 +1208,23 @@ function initSearchPage() {
     renderBookCards(books, results);
   };
 
-  categoryFilter?.addEventListener("change", updateResults);
+  categoryFilter?.addEventListener("change", () => {
+    if (categoryFilter.value === "전체" && query) {
+      window.location.href = "search.html";
+      return;
+    }
+    updateResults();
+  });
   sortFilter?.addEventListener("change", updateResults);
   document
     .querySelectorAll('input[name="loan-status"]')
     .forEach((radio) => radio.addEventListener("change", updateResults));
 
   const resetFilters = () => {
+    if (query) {
+      window.location.href = "search.html";
+      return;
+    }
     if (categoryFilter) categoryFilter.value = "전체";
     const allStatus = document.querySelector(
       'input[name="loan-status"][value="전체"]',
@@ -1231,6 +1237,38 @@ function initSearchPage() {
   resetButton?.addEventListener("click", resetFilters);
   emptyResetButton?.addEventListener("click", resetFilters);
   updateResults();
+}
+
+function populateCategoryFilter(select, selectedCategory = "전체") {
+  if (!select) return;
+
+  const categories = [...new Set(
+    getBooks()
+      .map((book) => String(book.category || "").trim())
+      .filter(Boolean),
+  )].sort((first, second) => first.localeCompare(second, "ko"));
+
+  select.replaceChildren();
+  const allOption = document.createElement("option");
+  allOption.value = "전체";
+  allOption.textContent = `전체 카테고리 (${getBooks().length}권)`;
+  select.append(allOption);
+
+  categories.forEach((category) => {
+    const count = getBooks().filter((book) => book.category === category).length;
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = `${category} (${count}권)`;
+    select.append(option);
+  });
+
+  if (selectedCategory !== "전체" && !categories.includes(selectedCategory)) {
+    const option = document.createElement("option");
+    option.value = selectedCategory;
+    option.textContent = `${selectedCategory} (0권)`;
+    select.append(option);
+  }
+  select.value = selectedCategory || "전체";
 }
 
 function initDetailPage() {
@@ -1520,7 +1558,9 @@ async function renderAdminUsers() {
     target.innerHTML = `<tr><td colspan="7">${escapeHTML(error.message)}</td></tr>`;
     return;
   }
-  const members = (data || []).filter((member) => member.role !== "admin");
+  const members = (data || []).filter(
+    (member) => String(member.email || "").trim().toLocaleLowerCase() !== PRIMARY_ADMIN_EMAIL,
+  );
   if (!members.length) {
     target.innerHTML = '<tr><td colspan="7">가입한 회원이 없습니다.</td></tr>';
     return;
@@ -1530,7 +1570,7 @@ async function renderAdminUsers() {
       <td>${escapeHTML(member.login_id || "-")}</td>
       <td><input class="admin-name-input" type="text" value="${escapeHTML(member.name || "")}" maxlength="30" data-name-input="${member.user_id}" /></td>
       <td>${escapeHTML(member.email || "-")}</td>
-      <td><select data-role-select="${member.user_id}"><option value="member" ${member.role === "member" ? "selected" : ""}>회원</option><option value="admin">관리자</option></select></td>
+      <td><select data-role-select="${member.user_id}"><option value="member" ${member.role === "member" ? "selected" : ""}>회원</option><option value="admin" ${member.role === "admin" ? "selected" : ""}>부관리자</option></select></td>
       <td>${formatDate(member.created_at)}</td>
       <td>${formatDate(member.last_sign_in_at)}</td>
       <td><div class="admin-row-actions"><button class="table-action" type="button" data-admin-action="save-user" data-user-id="${member.user_id}">저장</button><button class="table-action danger" type="button" data-admin-action="delete-user" data-user-id="${member.user_id}" data-user-name="${escapeHTML(member.name || member.email || "회원")}">삭제</button></div></td>
@@ -1660,7 +1700,7 @@ async function searchBooksForImport(event) {
   const button = form.querySelector('button[type="submit"]');
   const values = Object.fromEntries(new FormData(form).entries());
   const query = String(values.query || "").trim();
-  const category = String(values.category || "").trim() || query;
+  const category = String(values.category || "").trim();
   const size = Math.min(Math.max(Number(values.size) || 20, 1), 50);
 
   if (!query) {
@@ -1668,9 +1708,6 @@ async function searchBooksForImport(event) {
     return;
   }
 
-  if (form.elements.category && !form.elements.category.value.trim()) {
-    form.elements.category.value = category;
-  }
   if (button) button.disabled = true;
   setBookImportMessage("카카오 도서 API에서 검색하고 있습니다...");
 
@@ -2309,17 +2346,13 @@ async function searchBooksForUserRequest(event) {
   const button = form.querySelector('button[type="submit"]');
   const values = Object.fromEntries(new FormData(form).entries());
   const query = String(values.query || "").trim();
-  const category = String(values.category || "").trim() || query;
+  const category = String(values.category || "").trim();
   const size = Math.min(Math.max(Number(values.size) || 20, 1), 30);
 
   if (!query) {
     setUserBookSearchMessage("검색어를 입력해 주세요.");
     return;
   }
-  if (form.elements.category && !form.elements.category.value.trim()) {
-    form.elements.category.value = category;
-  }
-
   if (button) button.disabled = true;
   setUserBookSearchMessage("요청할 책을 검색하고 있습니다...");
   try {
@@ -2372,10 +2405,10 @@ function renderUserBookSearchResults() {
             : '<span class="cover-fallback" aria-hidden="true">B</span>'}
         </div>
         <div class="user-request-copy">
-          <span>${escapeHTML(book.category || "기타")}</span>
+          ${book.category ? `<span>${escapeHTML(book.category)}</span>` : ""}
           <h3>${escapeHTML(book.title)}</h3>
           <p>${escapeHTML(book.author)}${book.publisher ? ` · ${escapeHTML(book.publisher)}` : ""}</p>
-          <small>${escapeHTML(book.shortDescription || "도서 소개가 없습니다.")}</small>
+          <small>${escapeHTML(book.description || book.shortDescription || "도서 소개가 없습니다.")}</small>
         </div>
         <button class="button ${disabled ? "button-secondary is-disabled" : "button-primary"}" type="button" data-request-book-index="${index}" ${disabled ? "disabled" : ""}>${buttonText}</button>
       </article>
@@ -2475,7 +2508,7 @@ function initMyPage() {
       <div class="user-card">
         <div class="user-avatar">${escapeHTML(user.name.slice(0, 1).toUpperCase())}</div>
         <div><strong>${escapeHTML(user.name)}</strong><span>${escapeHTML(user.email)}</span></div>
-        <small>가입일 ${formatDate(user.createdAt || new Date())} · ${user.role === "admin" ? "관리자" : "도서관 회원"}</small>
+        <small>가입일 ${formatDate(user.createdAt || new Date())} · ${user.role === "admin" ? String(user.email).toLocaleLowerCase() === PRIMARY_ADMIN_EMAIL ? "최고 관리자" : "부관리자" : "도서관 회원"}</small>
       </div>
     `;
   }

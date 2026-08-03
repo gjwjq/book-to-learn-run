@@ -53,6 +53,119 @@ function createKeywords(query, category, title) {
     .slice(0, 6);
 }
 
+const BOOK_CATEGORIES = [
+  "자기계발",
+  "진로/취업",
+  "소설",
+  "인문",
+  "경제",
+  "IT",
+  "에세이",
+  "예술",
+  "사회",
+  "역사",
+  "과학",
+  "건강",
+  "교육",
+  "기타",
+];
+
+async function enrichBooksWithAI(books, requestedCategory = "") {
+  if (!books.length || !process.env.GEMINI_API_KEY) {
+    return books.map((book) => ({
+      ...book,
+      category: requestedCategory || "기타",
+    }));
+  }
+
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+  try {
+    const apiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "x-goog-api-key": process.env.GEMINI_API_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{
+              text: [
+                "당신은 한국 도서관의 도서 정보 담당자입니다.",
+                `각 책을 반드시 다음 카테고리 중 하나로만 분류하세요: ${BOOK_CATEGORIES.join(", ")}.`,
+                requestedCategory
+                  ? `사용자가 지정한 카테고리 '${requestedCategory}'를 모든 책에 그대로 적용하세요.`
+                  : "제목만 보지 말고 저자, 출판사, 소개를 함께 판단하세요.",
+                "원본 소개가 비어 있거나 말줄임표로 끊겼다면 주어진 정보 안에서 자연스러운 한국어 소개 1~2문장으로 정리하세요.",
+                "확인할 수 없는 줄거리나 사실은 새로 지어내지 마세요. 원본 소개가 완전하면 의미를 유지하세요.",
+              ].join(" "),
+            }],
+          },
+          contents: [{
+            role: "user",
+            parts: [{
+              text: JSON.stringify(books.map((book, index) => ({
+                index,
+                title: book.title,
+                author: book.author,
+                publisher: book.publisher,
+                description: String(book.description || "").slice(0, 700),
+              }))),
+            }],
+          }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  index: { type: "integer" },
+                  category: { type: "string", enum: BOOK_CATEGORIES },
+                  description: { type: "string" },
+                },
+                required: ["index", "category", "description"],
+              },
+            },
+            maxOutputTokens: 3000,
+          },
+        }),
+      },
+    );
+
+    const result = await apiResponse.json();
+    if (!apiResponse.ok) throw new Error("AI category request failed");
+    const outputText = result.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text || "")
+      .join("");
+    const classifications = JSON.parse(outputText || "[]");
+    const metadataByIndex = new Map(
+      classifications
+        .filter((item) => Number.isInteger(item.index) && BOOK_CATEGORIES.includes(item.category))
+        .map((item) => [item.index, item]),
+    );
+
+    return books.map((book, index) => {
+      const metadata = metadataByIndex.get(index);
+      const category = requestedCategory || metadata?.category || "기타";
+      const description = cleanText(metadata?.description) || book.description;
+      return {
+        ...book,
+        category,
+        description,
+        shortDescription: description,
+        keywords: [...new Set([category, ...(book.keywords || [])])].slice(0, 6),
+      };
+    });
+  } catch {
+    return books.map((book) => ({
+      ...book,
+      category: requestedCategory || "기타",
+    }));
+  }
+}
+
 module.exports = async function handler(request, response) {
   if (request.method !== "GET") {
     response.setHeader("Allow", "GET");
@@ -73,7 +186,7 @@ module.exports = async function handler(request, response) {
   }
 
   const query = cleanText(request.query?.query).slice(0, 100);
-  const category = cleanText(request.query?.category).slice(0, 40) || "기타";
+  const category = cleanText(request.query?.category).slice(0, 40);
   const page = Math.min(Math.max(Number(request.query?.page) || 1, 1), 50);
   const size = Math.min(Math.max(Number(request.query?.size) || 20, 1), 50);
 
@@ -128,17 +241,18 @@ module.exports = async function handler(request, response) {
         };
       })
       .filter((book) => book.title && book.author);
+    const categorizedBooks = await enrichBooksWithAI(books, category);
 
     response.setHeader(
       "Cache-Control",
       "private, max-age=0, s-maxage=300, stale-while-revalidate=600",
     );
     return response.status(200).json({
-      books,
+      books: categorizedBooks,
       page,
       isEnd: Boolean(result.meta?.is_end),
-      totalCount: Number(result.meta?.total_count) || books.length,
-      pageableCount: Number(result.meta?.pageable_count) || books.length,
+      totalCount: Number(result.meta?.total_count) || categorizedBooks.length,
+      pageableCount: Number(result.meta?.pageable_count) || categorizedBooks.length,
     });
   } catch {
     return response

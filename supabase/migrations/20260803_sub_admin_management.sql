@@ -1,5 +1,6 @@
--- 관리자 화면 정리: 관리자 계정 숨김, 회원 정보 통합 저장,
--- 관리자 계정의 대출/예약 차단
+-- 최고 관리자는 보호하고, 다른 관리자 권한 계정은 부관리자로 관리합니다.
+
+begin;
 
 create or replace function public.admin_list_users()
 returns table (
@@ -42,7 +43,7 @@ create or replace function public.admin_update_user(
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, auth
 as $$
 declare
   normalized_name text;
@@ -62,7 +63,7 @@ begin
     raise exception '회원을 찾을 수 없습니다';
   end if;
   if lower(target_email) = 'umjunsick6015@gmail.com' then
-    raise exception '최고 관리자 계정은 유저 관리에서 수정할 수 없습니다';
+    raise exception '최고 관리자 계정은 수정할 수 없습니다';
   end if;
 
   normalized_name := regexp_replace(trim(coalesce(next_name, '')), '\s+', ' ', 'g');
@@ -87,7 +88,6 @@ $$;
 revoke all on function public.admin_update_user(uuid, text, text) from public, anon;
 grant execute on function public.admin_update_user(uuid, text, text) to authenticated;
 
--- 관리자 계정은 삭제 대상에도 포함하지 않습니다.
 create or replace function public.admin_delete_user(target_user_id uuid)
 returns void
 language plpgsql
@@ -125,30 +125,4 @@ $$;
 revoke all on function public.admin_delete_user(uuid) from public, anon;
 grant execute on function public.admin_delete_user(uuid) to authenticated;
 
--- UI 우회나 직접 API 호출을 하더라도 관리자 대출/예약을 차단합니다.
-create or replace function public.prevent_admin_circulation()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if exists (
-    select 1 from public.profiles
-    where id = new.user_id and role = 'admin'
-  ) then
-    raise exception '관리자 계정은 대출하거나 예약할 수 없습니다';
-  end if;
-  return new;
-end;
-$$;
-
-drop trigger if exists prevent_admin_loans on public.loans;
-create trigger prevent_admin_loans
-  before insert or update on public.loans
-  for each row execute function public.prevent_admin_circulation();
-
-drop trigger if exists prevent_admin_reservations on public.reservations;
-create trigger prevent_admin_reservations
-  before insert or update on public.reservations
-  for each row execute function public.prevent_admin_circulation();
+commit;

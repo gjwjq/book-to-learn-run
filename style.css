@@ -377,35 +377,53 @@ img {
 }
 
 .nav-inner .admin-nav-link {
-  height: 34px;
-  gap: 7px;
-  padding: 0 14px;
-  color: #4f301f;
-  background: #f0dfc4;
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 999px;
-  font-weight: 780;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 38%);
-  transition: background 0.2s ease, transform 0.2s ease;
+  gap: 8px;
+  padding: 0 5px;
+  color: #eaddd2;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-weight: 720;
+  box-shadow: none;
+  transition: color 0.2s ease;
 }
 
 .nav-inner .admin-nav-link:hover,
 .nav-inner .admin-nav-link.active {
-  color: #fff;
-  background: #c9783c;
-  transform: translateY(-1px);
+  color: #ffd9bd;
+  background: transparent;
+  transform: none;
 }
 
 .nav-inner .admin-nav-link::after {
-  display: none;
+  display: block;
+  background: #db8247;
 }
 
 .nav-inner .admin-nav-first {
-  margin-left: 6px;
+  margin-left: 12px;
+  padding-left: 28px;
+}
+
+.nav-inner .admin-nav-first::before {
+  width: 1px;
+  height: 22px;
+  position: absolute;
+  left: 3px;
+  content: "";
+  background: rgb(255 255 255 / 22%);
 }
 
 .admin-nav-link span {
-  font-size: 0.9rem;
+  width: 26px;
+  height: 26px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 6px;
+  color: #f4decd;
+  background: rgb(255 255 255 / 8%);
+  font-size: 0.78rem;
   line-height: 1;
 }
 
@@ -1223,12 +1241,24 @@ img {
 }
 
 .active-query {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
   margin-bottom: 18px;
   padding: 11px 15px;
   color: var(--brown);
   background: var(--orange-pale);
   border-radius: 10px;
   font-size: 0.76rem;
+}
+
+.active-query a {
+  flex: 0 0 auto;
+  color: var(--brown);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .results-grid {
@@ -2820,6 +2850,11 @@ img {
 
 .user-request-copy small {
   margin-top: 7px;
+  overflow: visible;
+  color: #675f58;
+  text-overflow: clip;
+  white-space: normal;
+  line-height: 1.55;
   font-size: 0.78rem;
 }
 

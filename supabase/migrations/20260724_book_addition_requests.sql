@@ -55,6 +55,8 @@ as $$
 declare
   current_user_id uuid := auth.uid();
   next_external_id text := left(trim(coalesce(request_data ->> 'externalId', '')), 500);
+  next_isbn text := upper(regexp_replace(coalesce(request_data ->> 'isbn', ''), '[^0-9X]', '', 'gi'));
+  next_book_id text;
   next_title text := left(trim(coalesce(request_data ->> 'title', '')), 300);
   next_author text := left(trim(coalesce(request_data ->> 'author', '')), 300);
   next_keywords text[] := '{}';
@@ -70,13 +72,26 @@ begin
     raise exception '도서 정보가 올바르지 않습니다';
   end if;
 
+  next_book_id := case
+    when next_isbn <> '' then 'book-kakao-' || next_isbn
+    else 'book-request-' || left(md5(next_external_id), 16)
+  end;
+
   if exists (
     select 1
     from public.books
-    where lower(regexp_replace(trim(title), '\s+', ' ', 'g'))
-            = lower(regexp_replace(next_title, '\s+', ' ', 'g'))
-      and lower(regexp_replace(trim(author), '\s+', ' ', 'g'))
-            = lower(regexp_replace(next_author, '\s+', ' ', 'g'))
+    where id = next_book_id
+       or (
+         next_isbn = ''
+         and lower(regexp_replace(trim(title), '\s+', ' ', 'g'))
+               = lower(regexp_replace(next_title, '\s+', ' ', 'g'))
+         and lower(regexp_replace(trim(author), '\s+', ' ', 'g'))
+               = lower(regexp_replace(next_author, '\s+', ' ', 'g'))
+         and lower(trim(coalesce(publisher, '')))
+               = lower(trim(coalesce(request_data ->> 'publisher', '')))
+         and coalesce(published_date::text, '')
+               = left(coalesce(request_data ->> 'publishedDate', ''), 10)
+       )
   ) then
     raise exception '이미 도서관에 등록된 도서입니다';
   end if;
@@ -233,22 +248,30 @@ begin
     raise exception '처리할 도서 요청을 찾을 수 없습니다';
   end if;
 
+  next_book_id := case
+    when coalesce(upper(regexp_replace(request_record.isbn, '[^0-9X]', '', 'gi')), '') <> ''
+      then 'book-kakao-' || upper(regexp_replace(request_record.isbn, '[^0-9X]', '', 'gi'))
+    else 'book-request-' || left(md5(request_record.external_id), 16)
+  end;
+
   select id
   into existing_book_id
   from public.books
-  where lower(regexp_replace(trim(title), '\s+', ' ', 'g'))
-          = lower(regexp_replace(trim(request_record.title), '\s+', ' ', 'g'))
-    and lower(regexp_replace(trim(author), '\s+', ' ', 'g'))
-          = lower(regexp_replace(trim(request_record.author), '\s+', ' ', 'g'))
+  where id = next_book_id
+     or (
+       request_record.isbn is null
+       and lower(regexp_replace(trim(title), '\s+', ' ', 'g'))
+             = lower(regexp_replace(trim(request_record.title), '\s+', ' ', 'g'))
+       and lower(regexp_replace(trim(author), '\s+', ' ', 'g'))
+             = lower(regexp_replace(trim(request_record.author), '\s+', ' ', 'g'))
+       and lower(trim(coalesce(publisher, '')))
+             = lower(trim(coalesce(request_record.publisher, '')))
+       and coalesce(published_date::text, '')
+             = coalesce(request_record.published_date::text, '')
+     )
   limit 1;
 
   if existing_book_id is null then
-    next_book_id := case
-      when coalesce(regexp_replace(request_record.isbn, '[^0-9X]', '', 'gi'), '') <> ''
-        then 'book-kakao-' || regexp_replace(request_record.isbn, '[^0-9X]', '', 'gi')
-      else 'book-request-' || left(md5(request_record.external_id), 16)
-    end;
-
     insert into public.books (
       id,
       title,

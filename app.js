@@ -946,6 +946,7 @@ function isReserved(bookId) {
 
 function renderAuthArea() {
   const user = getCurrentUser();
+  document.body?.classList.toggle("has-admin-nav", user?.role === "admin");
   document.querySelectorAll("[data-auth-area]").forEach((container) => {
     if (user) {
       const adminLinks = user.role === "admin"
@@ -976,8 +977,42 @@ function renderAuthArea() {
     } else if (user?.role !== "member" && existingLink && getCurrentPage() !== "request") {
       existingLink.remove();
     }
+
+    const adminNavigationItems = [
+      { href: "admin.html#users", label: "회원 관리", section: "users" },
+      { href: "admin.html#books", label: "도서 관리", section: "books" },
+    ];
+
+    if (user?.role === "admin") {
+      adminNavigationItems.forEach((item, index) => {
+        let link = navigation.querySelector(`[data-admin-nav="${item.section}"]`);
+        if (!link) {
+          link = document.createElement("a");
+          link.dataset.adminNav = item.section;
+          link.className = `admin-nav-link${index === 0 ? " admin-nav-first" : ""}`;
+          link.href = item.href;
+          link.innerHTML = `<span aria-hidden="true">${index === 0 ? "♙" : "▤"}</span>${item.label}`;
+          navigation.insertBefore(link, navigation.querySelector(".nav-message"));
+        }
+      });
+    } else {
+      navigation.querySelectorAll(".admin-nav-link").forEach((link) => link.remove());
+    }
+  });
+
+  updateAdminNavigationState();
+}
+
+function updateAdminNavigationState() {
+  const activeSection = getCurrentPage() === "admin"
+    ? window.location.hash === "#books" ? "books" : "users"
+    : "";
+  document.querySelectorAll("[data-admin-nav]").forEach((link) => {
+    link.classList.toggle("active", link.dataset.adminNav === activeSection);
   });
 }
+
+window.addEventListener("hashchange", updateAdminNavigationState);
 
 function handleGlobalActions() {
   document.addEventListener("click", async (event) => {
@@ -1084,6 +1119,40 @@ function initHomePage() {
       )
       .join("")}`;
   }
+
+  initHomeBookRequest();
+}
+
+async function initHomeBookRequest() {
+  const actionPanel = document.getElementById("home-request-action");
+  if (!actionPanel) return;
+
+  const user = getCurrentUser();
+  if (!user) {
+    actionPanel.innerHTML = `
+      <div class="home-request-gate">
+        <strong>로그인 후 도서 추가를 요청할 수 있어요.</strong>
+        <p>회원 계정으로 로그인하면 검색 결과에서 바로 요청할 수 있습니다.</p>
+        <a class="button button-primary" href="login.html?next=index.html%23home-book-request">로그인하고 요청하기</a>
+      </div>
+    `;
+    return;
+  }
+
+  if (user.role === "admin") {
+    actionPanel.innerHTML = `
+      <div class="home-request-gate">
+        <strong>회원의 도서 추가 요청을 확인하세요.</strong>
+        <p>관리자는 요청을 승인해 도서 목록에 바로 추가할 수 있습니다.</p>
+        <a class="button button-primary" href="admin.html#books">요청 관리로 이동</a>
+      </div>
+    `;
+    return;
+  }
+
+  document.getElementById("user-book-search-form")?.addEventListener("submit", searchBooksForUserRequest);
+  document.getElementById("user-book-search-results")?.addEventListener("click", submitUserBookRequest);
+  await loadMyBookRequests();
 }
 
 function initSearchPage() {
@@ -1515,6 +1584,34 @@ function normalizeBookIdentity(title, author) {
     .replace(/\s+/g, " ");
 }
 
+function normalizeBookIsbn(value) {
+  const candidates = String(value || "")
+    .split(/\s+/)
+    .map((isbn) => isbn.replace(/[^0-9X]/gi, "").toUpperCase())
+    .filter(Boolean);
+  return candidates.find((isbn) => isbn.length === 13) || candidates[0] || "";
+}
+
+function getBookIsbn(book) {
+  const directIsbn = normalizeBookIsbn(book?.isbn);
+  if (directIsbn) return directIsbn;
+
+  const importedId = String(book?.id || "").match(/^book-kakao-([0-9X]+)$/i)?.[1];
+  return normalizeBookIsbn(importedId);
+}
+
+function getBookEditionIdentity(book) {
+  const isbn = getBookIsbn(book);
+  if (isbn) return `isbn:${isbn}`;
+
+  return [
+    "edition",
+    normalizeBookIdentity(book?.title, book?.author),
+    String(book?.publisher || "").trim().toLocaleLowerCase("ko-KR"),
+    String(book?.publishedDate || "").slice(0, 10),
+  ].join("|");
+}
+
 function createStableBookHash(value) {
   let hash = 2166136261;
   const input = String(value || "");
@@ -1526,7 +1623,7 @@ function createStableBookHash(value) {
 }
 
 function createImportedBookId(book) {
-  const isbn = String(book.isbn || "").replace(/[^0-9X]/gi, "");
+  const isbn = normalizeBookIsbn(book.isbn);
   return isbn
     ? `book-kakao-${isbn}`
     : `book-kakao-${createStableBookHash(book.externalId || normalizeBookIdentity(book.title, book.author))}`;
@@ -1610,20 +1707,23 @@ function renderBookImportResults(totalCount = 0) {
   }
   if (selectAll) selectAll.checked = false;
 
-  const existingIdentities = new Set(
-    getBooks().map((book) => normalizeBookIdentity(book.title, book.author)),
+  const existingEditions = new Set(
+    getBooks().map(getBookEditionIdentity),
   );
   const existingIds = new Set(getBooks().map((book) => book.id));
-  const resultIdentities = new Set();
+  const resultEditions = new Set();
 
   target.innerHTML = adminBookImportResults.map((book, index) => {
-    const identity = normalizeBookIdentity(book.title, book.author);
+    const editionIdentity = getBookEditionIdentity(book);
     const importedId = createImportedBookId(book);
     const alreadyExists =
-      existingIdentities.has(identity) ||
+      existingEditions.has(editionIdentity) ||
       existingIds.has(importedId) ||
-      resultIdentities.has(identity);
-    resultIdentities.add(identity);
+      resultEditions.has(editionIdentity);
+    resultEditions.add(editionIdentity);
+    const existingLabel = getBookIsbn(book)
+      ? "동일 ISBN 등록됨"
+      : "동일 판본 등록됨";
 
     return `
       <label class="book-import-card ${alreadyExists ? "is-existing" : ""}">
@@ -1637,7 +1737,7 @@ function renderBookImportResults(totalCount = 0) {
           <strong>${escapeHTML(book.title)}</strong>
           <span>${escapeHTML(book.author)}${book.publisher ? ` · ${escapeHTML(book.publisher)}` : ""}</span>
           <small>${escapeHTML(book.publishedDate || "출판일 미상")} · ${escapeHTML(book.category || "기타")}</small>
-          ${alreadyExists ? "<b>이미 등록된 도서</b>" : ""}
+          ${alreadyExists ? `<b>${existingLabel}</b>` : ""}
         </span>
       </label>
     `;
@@ -1663,25 +1763,25 @@ async function importSelectedBooks() {
     return;
   }
 
-  const existingIdentities = new Set(
-    getBooks().map((book) => normalizeBookIdentity(book.title, book.author)),
+  const existingEditions = new Set(
+    getBooks().map(getBookEditionIdentity),
   );
   const existingIds = new Set(getBooks().map((book) => book.id));
-  const pendingIdentities = new Set();
+  const pendingEditions = new Set();
   const booksToInsert = selectedIndexes
     .map((index) => adminBookImportResults[index])
     .filter(Boolean)
     .filter((book) => {
-      const identity = normalizeBookIdentity(book.title, book.author);
+      const editionIdentity = getBookEditionIdentity(book);
       const importedId = createImportedBookId(book);
       if (
-        existingIdentities.has(identity) ||
+        existingEditions.has(editionIdentity) ||
         existingIds.has(importedId) ||
-        pendingIdentities.has(identity)
+        pendingEditions.has(editionIdentity)
       ) {
         return false;
       }
-      pendingIdentities.add(identity);
+      pendingEditions.add(editionIdentity);
       return true;
     })
     .map((book) => serializeBookForDatabase({
@@ -2245,8 +2345,8 @@ function renderUserBookSearchResults() {
   const target = document.getElementById("user-book-search-results");
   if (!target) return;
 
-  const existingIdentities = new Set(
-    getBooks().map((book) => normalizeBookIdentity(book.title, book.author)),
+  const existingEditions = new Set(
+    getBooks().map(getBookEditionIdentity),
   );
   const pendingExternalIds = new Set(
     myBookRequestsCache
@@ -2255,7 +2355,7 @@ function renderUserBookSearchResults() {
   );
 
   target.innerHTML = userBookSearchResults.map((book, index) => {
-    const alreadyExists = existingIdentities.has(normalizeBookIdentity(book.title, book.author));
+    const alreadyExists = existingEditions.has(getBookEditionIdentity(book));
     const alreadyRequested = pendingExternalIds.has(String(book.externalId || "").toLocaleLowerCase());
     const disabled = alreadyExists || alreadyRequested;
     const buttonText = alreadyExists
@@ -2311,8 +2411,8 @@ async function submitUserBookRequest(event) {
 async function loadMyBookRequests() {
   const target = document.getElementById("my-book-request-list");
   const user = getCurrentUser();
-  if (!target || !user || !window.btlrSupabase) return;
-  target.innerHTML = '<p class="request-loading">요청 내역을 불러오는 중...</p>';
+  if (!user || !window.btlrSupabase) return;
+  if (target) target.innerHTML = '<p class="request-loading">요청 내역을 불러오는 중...</p>';
 
   const { data, error } = await window.btlrSupabase
     .from("book_requests")
@@ -2321,12 +2421,12 @@ async function loadMyBookRequests() {
     .order("requested_at", { ascending: false });
 
   if (error) {
-    target.innerHTML = `<p class="request-loading">${escapeHTML(error.message)}</p>`;
+    if (target) target.innerHTML = `<p class="request-loading">${escapeHTML(error.message)}</p>`;
     return;
   }
 
   myBookRequestsCache = data || [];
-  renderMyBookRequests();
+  if (target) renderMyBookRequests();
 }
 
 function renderMyBookRequests() {

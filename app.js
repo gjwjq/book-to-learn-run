@@ -2228,63 +2228,78 @@ async function saveAdminBook(event) {
   const form = event.currentTarget;
   const isEdit = form.id === "admin-book-edit-form";
   const submitButton = form.querySelector('button[type="submit"]');
-  if (submitButton) submitButton.disabled = true;
-  let values = Object.fromEntries(new FormData(form).entries());
-  if (!String(values.title || "").trim() || !String(values.author || "").trim()) {
-    showBookFormMessage(form, "제목과 저자를 입력해 주세요.");
-    if (submitButton) submitButton.disabled = false;
-    return;
+  const originalButtonText = submitButton?.textContent || "저장";
+
+  if (!form.reportValidity()) return;
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = isEdit ? "저장 중..." : "추가 중...";
   }
-  const totalQuantity = Number(values.totalQuantity);
-  if (!Number.isInteger(totalQuantity) || totalQuantity < 1) {
-    showBookFormMessage(form, "전체 수량은 1 이상의 정수로 입력해 주세요.");
-    if (submitButton) submitButton.disabled = false;
-    return;
-  }
-  if (needsBookMetadata(form)) {
-    showBookFormMessage(form, "AI가 빈 도서 정보를 작성하고 있습니다...");
-    const aiResult = await fillBookMetadataWithAI(form);
-    if (!aiResult.success) {
-      showBookFormMessage(form, aiResult.message);
-      if (submitButton) submitButton.disabled = false;
-      return;
+
+  try {
+    let values = Object.fromEntries(new FormData(form).entries());
+    if (!String(values.title || "").trim() || !String(values.author || "").trim()) {
+      throw new Error("제목과 저자를 입력해 주세요.");
     }
-    saveAdminBookDraft(form);
-    values = Object.fromEntries(new FormData(form).entries());
-  }
-  const generatedId = String(values.id || "").trim() || `book-${Date.now()}`;
-  const coverResult = await uploadBookCover(form, generatedId);
-  if (coverResult.error) {
-    showBookFormMessage(form, coverResult.error);
-    if (submitButton) submitButton.disabled = false;
-    return;
-  }
-  const book = {
-    id: generatedId,
-    title: String(values.title || "").trim(),
-    author: String(values.author || "").trim(),
-    publisher: String(values.publisher || "").trim(),
-    publishedDate: values.publishedDate || null,
-    category: String(values.category || "기타").trim(),
-    keywords: String(values.keywords || "").split(",").map((item) => item.trim()).filter(Boolean),
-    description: String(values.description || "").trim(),
-    shortDescription: String(values.shortDescription || "").trim(),
-    thumbnail: coverResult.url,
-    totalQuantity,
-    loanStatus: "대출 가능",
-  };
-  const payload = serializeBookForDatabase(book);
-  const originalId = isEdit ? String(values.originalId || "") : "";
-  const query = isEdit
-    ? window.btlrSupabase.from("books").update(payload).eq("id", originalId)
-    : window.btlrSupabase.from("books").insert(payload);
-  const { error } = await query;
-  if (submitButton) submitButton.disabled = false;
-  showBookFormMessage(form, error ? error.message : isEdit ? "도서 정보를 수정했습니다." : "도서를 추가했습니다.", !error);
-  if (!error) {
+
+    const totalQuantity = Number(values.totalQuantity);
+    if (!Number.isInteger(totalQuantity) || totalQuantity < 1) {
+      throw new Error("전체 수량은 1 이상의 정수로 입력해 주세요.");
+    }
+
+    // 새 도서만 빈 정보를 AI로 채웁니다. 기존 도서 수정은 AI 상태와 관계없이 저장합니다.
+    if (!isEdit && needsBookMetadata(form)) {
+      showBookFormMessage(form, "AI가 빈 도서 정보를 작성하고 있습니다...");
+      const aiResult = await fillBookMetadataWithAI(form);
+      if (!aiResult.success) throw new Error(aiResult.message);
+      saveAdminBookDraft(form);
+      values = Object.fromEntries(new FormData(form).entries());
+    }
+
+    const generatedId = String(values.id || "").trim() || `book-${Date.now()}`;
+    const originalId = isEdit ? String(values.originalId || "").trim() : "";
+    if (isEdit && !originalId) throw new Error("수정할 도서 ID를 찾을 수 없습니다.");
+
+    const coverResult = await uploadBookCover(form, generatedId);
+    if (coverResult.error) throw new Error(coverResult.error);
+
+    const book = {
+      id: generatedId,
+      title: String(values.title || "").trim(),
+      author: String(values.author || "").trim(),
+      publisher: String(values.publisher || "").trim(),
+      publishedDate: values.publishedDate || null,
+      category: String(values.category || "기타").trim(),
+      keywords: String(values.keywords || "").split(",").map((item) => item.trim()).filter(Boolean),
+      description: String(values.description || "").trim(),
+      shortDescription: String(values.shortDescription || "").trim(),
+      thumbnail: coverResult.url,
+      totalQuantity,
+      loanStatus: "대출 가능",
+    };
+    const payload = serializeBookForDatabase(book);
+    const result = isEdit
+      ? await window.btlrSupabase.from("books").update(payload).eq("id", originalId).select("id").maybeSingle()
+      : await window.btlrSupabase.from("books").insert(payload).select("id").single();
+
+    if (result.error) throw new Error(result.error.message);
+    if (isEdit && !result.data) throw new Error("수정할 도서를 찾지 못했거나 수정 권한이 없습니다.");
+
+    const successMessage = isEdit ? "도서 정보를 수정했습니다." : "도서를 추가했습니다.";
+    showBookFormMessage(form, successMessage, true);
+    showToast(successMessage);
     if (isEdit) closeAdminBookDialog();
     else resetAdminBookForm();
     await renderAdminBooks();
+  } catch (error) {
+    const message = error?.message || "도서 정보를 저장하지 못했습니다.";
+    showBookFormMessage(form, message);
+    showToast(message);
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalButtonText;
+    }
   }
 }
 

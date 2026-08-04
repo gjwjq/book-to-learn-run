@@ -565,12 +565,6 @@ function sortBooks(books, sortOption = "default") {
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
     );
   }
-  if (sortOption === "available") {
-    const order = { "대출 가능": 0, "예약 가능": 1, "대출 중": 2 };
-    return sortedBooks.sort(
-      (a, b) => (order[a.loanStatus] ?? 9) - (order[b.loanStatus] ?? 9),
-    );
-  }
   return sortedBooks;
 }
 

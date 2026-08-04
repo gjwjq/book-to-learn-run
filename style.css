@@ -3473,6 +3473,48 @@ img {
   margin-top: 24px;
 }
 
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 22px;
+}
+
+.admin-pagination[hidden] {
+  display: none;
+}
+
+.admin-pagination button {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 7px 11px;
+  border: 1px solid #d2c5b7;
+  border-radius: 8px;
+  color: var(--brown);
+  background: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-pagination button.active {
+  border-color: var(--brown);
+  color: #fff;
+  background: var(--brown);
+}
+
+.admin-pagination button:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.admin-pagination-ellipsis {
+  padding: 0 3px;
+  color: #83766b;
+}
+
 .admin-book-row {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) auto;

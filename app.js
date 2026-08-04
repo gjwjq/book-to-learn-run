@@ -287,6 +287,10 @@ let loansCache = [];
 let adminBookImportResults = [];
 let userBookSearchResults = [];
 let myBookRequestsCache = [];
+let adminUsersCache = [];
+let adminUserPage = 1;
+let adminBookPage = 1;
+const ADMIN_PAGE_SIZE = 20;
 const PRIMARY_ADMIN_EMAIL = "umjunsick6015@gmail.com";
 const BOOK_CATEGORIES = ["자기계발", "진로/취업", "소설", "인문", "경제", "IT", "에세이"];
 const CURATED_CATEGORY_BOOKS = {
@@ -1590,6 +1594,8 @@ async function initAdminPage() {
   document.getElementById("cancel-book-edit")?.addEventListener("click", closeAdminBookDialog);
   document.getElementById("admin-user-list")?.addEventListener("click", handleAdminUserAction);
   document.getElementById("admin-book-list")?.addEventListener("click", handleAdminBookAction);
+  document.getElementById("admin-user-pagination")?.addEventListener("click", handleAdminPagination);
+  document.getElementById("admin-book-pagination")?.addEventListener("click", handleAdminPagination);
   document.getElementById("admin-book-request-list")?.addEventListener("click", handleAdminBookRequestAction);
   document.getElementById("book-import-search-form")?.addEventListener("submit", searchBooksForImport);
   document.getElementById("book-import-select-all")?.addEventListener("change", toggleAllImportBooks);
@@ -1616,17 +1622,30 @@ async function renderAdminUsers() {
   target.innerHTML = '<tr><td colspan="7">불러오는 중...</td></tr>';
   const { data, error } = await window.btlrSupabase.rpc("admin_list_users");
   if (error) {
+    adminUsersCache = [];
     target.innerHTML = `<tr><td colspan="7">${escapeHTML(error.message)}</td></tr>`;
+    renderAdminPagination("users", 0);
     return;
   }
-  const members = (data || []).filter(
+  adminUsersCache = (data || []).filter(
     (member) => String(member.email || "").trim().toLocaleLowerCase() !== PRIMARY_ADMIN_EMAIL,
   );
-  if (!members.length) {
+  renderAdminUserPage();
+}
+
+function renderAdminUserPage() {
+  const target = document.getElementById("admin-user-list");
+  if (!target) return;
+  if (!adminUsersCache.length) {
     target.innerHTML = '<tr><td colspan="7">가입한 회원이 없습니다.</td></tr>';
+    renderAdminPagination("users", 0);
     return;
   }
-  target.innerHTML = members.map((member) => `
+  const totalPages = Math.ceil(adminUsersCache.length / ADMIN_PAGE_SIZE);
+  adminUserPage = Math.min(Math.max(adminUserPage, 1), totalPages);
+  const startIndex = (adminUserPage - 1) * ADMIN_PAGE_SIZE;
+  const visibleMembers = adminUsersCache.slice(startIndex, startIndex + ADMIN_PAGE_SIZE);
+  target.innerHTML = visibleMembers.map((member) => `
     <tr>
       <td>${escapeHTML(member.login_id || "-")}</td>
       <td><input class="admin-name-input" type="text" value="${escapeHTML(member.name || "")}" maxlength="30" data-name-input="${member.user_id}" /></td>
@@ -1637,6 +1656,57 @@ async function renderAdminUsers() {
       <td><div class="admin-row-actions"><button class="table-action" type="button" data-admin-action="save-user" data-user-id="${member.user_id}">저장</button><button class="table-action danger" type="button" data-admin-action="delete-user" data-user-id="${member.user_id}" data-user-name="${escapeHTML(member.name || member.email || "회원")}">삭제</button></div></td>
     </tr>
   `).join("");
+  renderAdminPagination("users", adminUsersCache.length);
+}
+
+function getAdminPaginationItems(currentPage, totalPages) {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+  const sortedPages = [...pages].filter((page) => page >= 1 && page <= totalPages).sort((a, b) => a - b);
+  const items = [];
+  sortedPages.forEach((page, index) => {
+    if (index > 0 && page - sortedPages[index - 1] > 1) items.push("ellipsis");
+    items.push(page);
+  });
+  return items;
+}
+
+function renderAdminPagination(type, totalItems) {
+  const target = document.getElementById(type === "users" ? "admin-user-pagination" : "admin-book-pagination");
+  if (!target) return;
+  const totalPages = Math.ceil(totalItems / ADMIN_PAGE_SIZE);
+  if (totalPages <= 1) {
+    target.replaceChildren();
+    target.hidden = true;
+    return;
+  }
+
+  const currentPage = type === "users" ? adminUserPage : adminBookPage;
+  const pageItems = getAdminPaginationItems(currentPage, totalPages);
+  target.hidden = false;
+  target.innerHTML = `
+    <button type="button" data-admin-page-type="${type}" data-admin-page="${currentPage - 1}" ${currentPage === 1 ? "disabled" : ""}>이전</button>
+    ${pageItems.map((item) => item === "ellipsis"
+      ? '<span class="admin-pagination-ellipsis" aria-hidden="true">…</span>'
+      : `<button type="button" data-admin-page-type="${type}" data-admin-page="${item}" class="${item === currentPage ? "active" : ""}" ${item === currentPage ? 'aria-current="page"' : ""}>${item}</button>`).join("")}
+    <button type="button" data-admin-page-type="${type}" data-admin-page="${currentPage + 1}" ${currentPage === totalPages ? "disabled" : ""}>다음</button>
+  `;
+}
+
+function handleAdminPagination(event) {
+  const button = event.target.closest("[data-admin-page]");
+  if (!button || button.disabled) return;
+  const nextPage = Number(button.dataset.adminPage);
+  if (!Number.isInteger(nextPage) || nextPage < 1) return;
+  if (button.dataset.adminPageType === "users") {
+    adminUserPage = nextPage;
+    renderAdminUserPage();
+    document.getElementById("users")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  adminBookPage = nextPage;
+  renderAdminBookPage();
+  document.getElementById("admin-book-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function handleAdminUserAction(event) {
@@ -2185,16 +2255,30 @@ async function handleAdminBookRequestAction(event) {
 
 async function renderAdminBooks() {
   await loadBooksFromSupabase();
+  renderAdminBookPage();
+}
+
+function renderAdminBookPage() {
   const target = document.getElementById("admin-book-list");
   if (!target) return;
   const books = getBooks();
-  target.innerHTML = books.length ? books.map((book) => `
+  if (!books.length) {
+    target.innerHTML = '<p class="admin-empty">등록된 도서가 없습니다.</p>';
+    renderAdminPagination("books", 0);
+    return;
+  }
+  const totalPages = Math.ceil(books.length / ADMIN_PAGE_SIZE);
+  adminBookPage = Math.min(Math.max(adminBookPage, 1), totalPages);
+  const startIndex = (adminBookPage - 1) * ADMIN_PAGE_SIZE;
+  const visibleBooks = books.slice(startIndex, startIndex + ADMIN_PAGE_SIZE);
+  target.innerHTML = visibleBooks.map((book) => `
     <article class="admin-book-row">
       <img src="${escapeHTML(book.thumbnail)}" alt="" onerror="this.hidden=true" />
       <div><strong>${escapeHTML(book.title)}</strong><span>${escapeHTML(book.author)} · ${escapeHTML(book.publisher)}</span><small>${escapeHTML(book.id)} · ${escapeHTML(book.category)} · 재고 ${book.availableQuantity ?? 1}/${book.totalQuantity ?? 1}권</small></div>
       <div class="admin-row-actions"><button type="button" data-admin-book-action="edit" data-book-id="${escapeHTML(book.id)}">수정</button><button type="button" data-admin-book-action="delete" data-book-id="${escapeHTML(book.id)}">삭제</button></div>
     </article>
-  `).join("") : '<p class="admin-empty">등록된 도서가 없습니다.</p>';
+  `).join("");
+  renderAdminPagination("books", books.length);
 }
 
 function resetAdminBookForm() {

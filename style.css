@@ -479,6 +479,11 @@ img {
   font-style: normal;
 }
 
+.hero-phrase {
+  display: inline-block;
+  white-space: nowrap;
+}
+
 .hero-description {
   max-width: 570px;
   margin-top: 24px;
@@ -2347,9 +2352,18 @@ img {
     font-size: 0.68rem;
   }
 
-  .auth-area .signup-link,
-  .auth-area .logout-button {
+  .auth-area .signup-link {
     display: none;
+  }
+
+  .auth-area .user-link {
+    max-width: 82px;
+  }
+
+  .auth-area .logout-button {
+    display: inline-flex;
+    padding-inline: 7px;
+    font-size: 0.64rem;
   }
 
   .header-search {
@@ -2386,7 +2400,8 @@ img {
   }
 
   .hero-copy h1 {
-    font-size: 2.38rem;
+    font-size: clamp(2rem, 10.5vw, 2.38rem);
+    line-height: 1.18;
   }
 
   .hero-description {
@@ -2487,6 +2502,16 @@ img {
 
   .results-toolbar {
     align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .active-query {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .active-query a {
+    white-space: normal;
   }
 
   .detail-cover-area {
@@ -2629,6 +2654,43 @@ img {
 
   .footer-note {
     text-align: left;
+  }
+
+  .toast {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .category-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-search {
+    height: auto;
+    padding: 0;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+    overflow: visible;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .hero-search input,
+  .hero-search .button {
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+
+  .hero-search input {
+    background: var(--paper);
   }
 }
 
@@ -3639,7 +3701,62 @@ img {
     grid-template-columns: 48px minmax(0, 1fr);
   }
 
+  .admin-book-row > div:nth-child(2) {
+    min-width: 0;
+  }
+
+  .admin-book-row small {
+    overflow-wrap: anywhere;
+  }
+
   .admin-row-actions {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-dialog {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .admin-dialog-heading {
+    margin-bottom: 14px;
+  }
+
+  .admin-dialog .admin-book-form {
+    max-height: calc(100dvh - 112px);
+  }
+
+  .admin-book-form {
+    gap: 13px;
+    padding: 14px;
+  }
+
+  .admin-form-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-form-actions .button {
+    width: 100%;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 11px 9px;
+    font-size: 0.8rem;
+  }
+
+  .admin-pagination {
+    gap: 5px;
+  }
+
+  .admin-pagination button {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 6px 9px;
   }
 }

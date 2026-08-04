@@ -2686,7 +2686,7 @@ img {
 }
 
 .home-request-search {
-  grid-template-columns: minmax(210px, 1.45fr) minmax(150px, 0.9fr) auto;
+  grid-template-columns: minmax(210px, 1fr) auto;
   background: rgb(255 253 249 / 78%);
 }
 
@@ -2751,7 +2751,7 @@ img {
 
 .request-search-form {
   display: grid;
-  grid-template-columns: minmax(240px, 1.6fr) minmax(160px, 1fr) 110px auto;
+  grid-template-columns: minmax(240px, 1fr) 110px auto;
   align-items: end;
   gap: 12px;
   padding: 20px;
@@ -3107,7 +3107,7 @@ img {
 
 .book-import-search {
   display: grid;
-  grid-template-columns: minmax(220px, 1.5fr) minmax(160px, 1fr) 110px auto;
+  grid-template-columns: minmax(220px, 1fr) 110px auto;
   align-items: end;
   gap: 12px;
   margin-top: 18px;

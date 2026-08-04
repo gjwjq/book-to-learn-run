@@ -2337,9 +2337,12 @@ async function fillBookMetadataWithAI(form) {
       shortDescription: result.shortDescription,
       description: result.description,
     };
+    const validCategories = new Set(["자기계발", "진로/취업", "소설", "인문", "경제", "IT", "에세이"]);
+    const shouldRepairClassification = !validCategories.has(String(form.elements.category?.value || "").trim());
     Object.entries(fieldMap).forEach(([name, value]) => {
       const field = form.elements[name];
-      if (field && !String(field.value || "").trim() && value) field.value = value;
+      const replaceInvalidClassification = shouldRepairClassification && (name === "category" || name === "keywords");
+      if (field && (!String(field.value || "").trim() || replaceInvalidClassification) && value) field.value = value;
     });
     form.querySelector(".admin-auto-fields")?.setAttribute("open", "");
     return { success: true, message: "AI가 빈 도서 정보를 채웠습니다. 저장 전에 확인해 주세요." };

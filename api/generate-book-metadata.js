@@ -1,5 +1,6 @@
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://khbnqkkxhcluqczxvdyv.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_QnlhzDiZqQyV1DSf_uKUVA_0XuNS6LN";
+const BOOK_CATEGORIES = ["자기계발", "진로/취업", "소설", "인문", "경제", "IT", "에세이"];
 
 async function getAdminUser(authorization) {
   if (!authorization?.startsWith("Bearer ")) return null;
@@ -32,6 +33,8 @@ module.exports = async function handler(request, response) {
   const input = request.body || {};
   const title = String(input.title || "").trim().slice(0, 200);
   const author = String(input.author || "").trim().slice(0, 120);
+  const requestedCategory = String(input.category || "").trim().slice(0, 80);
+  const category = BOOK_CATEGORIES.includes(requestedCategory) ? requestedCategory : "";
   if (!title || !author) return response.status(400).json({ message: "제목과 저자가 필요합니다." });
 
   const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
@@ -49,6 +52,9 @@ module.exports = async function handler(request, response) {
           text: [
             "당신은 한국 도서관 프로젝트의 도서 정보 작성 담당자입니다.",
             "제공된 제목과 저자를 기반으로 한국어 메타데이터를 간결하고 사실적으로 작성하세요.",
+            `카테고리는 반드시 다음 중 하나만 사용하세요: ${BOOK_CATEGORIES.join(", ")}.`,
+            "책 제목을 카테고리로 복사하지 마세요. 추리·미스터리·스릴러 작품의 카테고리는 '소설'이며 세부 장르는 키워드에 넣으세요.",
+            "키워드는 제목 자체가 아니라 장르와 핵심 주제를 3~6개 작성하세요.",
             "책의 내용을 확실히 알 수 없으면 과장하거나 구체적 사실을 지어내지 말고 일반적인 수준으로 작성하세요.",
           ].join(" "),
         }],
@@ -61,7 +67,7 @@ module.exports = async function handler(request, response) {
             author,
             publisher: String(input.publisher || "").trim().slice(0, 120),
             publishedDate: String(input.publishedDate || "").trim(),
-            category: String(input.category || "").trim().slice(0, 80),
+            category,
           }),
         }],
       }],
@@ -73,7 +79,7 @@ module.exports = async function handler(request, response) {
               author: { type: "string" },
               publisher: { type: "string" },
               publishedDate: { type: "string" },
-              category: { type: "string" },
+              category: { type: "string", enum: BOOK_CATEGORIES },
               keywords: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 6 },
               shortDescription: { type: "string" },
               description: { type: "string" },

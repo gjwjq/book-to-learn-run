@@ -42,17 +42,6 @@ function getPreferredIsbn(value) {
   return candidates.find((isbn) => isbn.length === 13) || candidates[0] || "";
 }
 
-function createKeywords(query, category, title) {
-  const titleWords = cleanText(title)
-    .split(/[\s:·,()[\]{}]+/)
-    .map((word) => word.replace(/[^\p{L}\p{N}]/gu, ""))
-    .filter((word) => word.length >= 2);
-
-  return [...new Set([cleanText(category), cleanText(query), ...titleWords])]
-    .filter(Boolean)
-    .slice(0, 6);
-}
-
 const BOOK_CATEGORIES = [
   "자기계발",
   "진로/취업",
@@ -61,20 +50,36 @@ const BOOK_CATEGORIES = [
   "경제",
   "IT",
   "에세이",
-  "예술",
-  "사회",
-  "역사",
-  "과학",
-  "건강",
-  "교육",
-  "기타",
 ];
+
+const GENRE_KEYWORDS = [
+  "추리", "미스터리", "스릴러", "판타지", "로맨스", "SF", "역사", "청춘",
+  "철학", "심리", "사회", "과학", "교육", "건강", "투자", "마케팅", "프로그래밍",
+];
+
+function getFallbackCategory(book) {
+  const source = [book.title, book.author, book.publisher, book.description].join(" ");
+  if (/소설|추리|미스터리|스릴러|판타지|로맨스|SF|문학/.test(source)) return "소설";
+  if (/에세이|수필|일상|육아|여행기/.test(source)) return "에세이";
+  if (/개발|프로그래밍|코딩|컴퓨터|인공지능|AI|데이터|소프트웨어/.test(source)) return "IT";
+  if (/경제|경영|투자|금융|마케팅|비즈니스/.test(source)) return "경제";
+  if (/취업|면접|직업|진로|커리어|포트폴리오/.test(source)) return "진로/취업";
+  if (/습관|성장|성공|자기계발|생산성|공부법/.test(source)) return "자기계발";
+  return "인문";
+}
+
+function createFallbackKeywords(book, category) {
+  const source = [book.title, book.description].join(" ");
+  const genres = GENRE_KEYWORDS.filter((keyword) => source.includes(keyword));
+  return [...new Set([category, ...genres])].slice(0, 6);
+}
 
 async function enrichBooksWithAI(books, requestedCategory = "") {
   if (!books.length || !process.env.GEMINI_API_KEY) {
     return books.map((book) => ({
       ...book,
-      category: requestedCategory || "기타",
+      category: requestedCategory || getFallbackCategory(book),
+      keywords: createFallbackKeywords(book, requestedCategory || getFallbackCategory(book)),
     }));
   }
 
@@ -97,6 +102,9 @@ async function enrichBooksWithAI(books, requestedCategory = "") {
                 requestedCategory
                   ? `사용자가 지정한 카테고리 '${requestedCategory}'를 모든 책에 그대로 적용하세요.`
                   : "제목만 보지 말고 저자, 출판사, 소개를 함께 판단하세요.",
+                "책 제목이나 검색어를 카테고리로 사용하지 마세요.",
+                "추리·미스터리·스릴러 작품은 카테고리를 '소설'로 분류하고, 세부 장르는 키워드에 넣으세요.",
+                "키워드는 제목을 그대로 복사하지 말고 장르와 핵심 주제를 3~6개 작성하세요.",
                 "원본 소개가 비어 있거나 말줄임표로 끊겼다면 주어진 정보 안에서 자연스러운 한국어 소개 1~2문장으로 정리하세요.",
                 "확인할 수 없는 줄거리나 사실은 새로 지어내지 마세요. 원본 소개가 완전하면 의미를 유지하세요.",
               ].join(" "),
@@ -123,9 +131,10 @@ async function enrichBooksWithAI(books, requestedCategory = "") {
                 properties: {
                   index: { type: "integer" },
                   category: { type: "string", enum: BOOK_CATEGORIES },
+                  keywords: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 6 },
                   description: { type: "string" },
                 },
-                required: ["index", "category", "description"],
+                required: ["index", "category", "keywords", "description"],
               },
             },
             maxOutputTokens: 3000,
@@ -148,20 +157,24 @@ async function enrichBooksWithAI(books, requestedCategory = "") {
 
     return books.map((book, index) => {
       const metadata = metadataByIndex.get(index);
-      const category = requestedCategory || metadata?.category || "기타";
+      const category = requestedCategory || metadata?.category || getFallbackCategory(book);
       const description = cleanText(metadata?.description) || book.description;
+      const keywords = Array.isArray(metadata?.keywords)
+        ? metadata.keywords.map(cleanText).filter(Boolean)
+        : createFallbackKeywords(book, category);
       return {
         ...book,
         category,
         description,
         shortDescription: description,
-        keywords: [...new Set([category, ...(book.keywords || [])])].slice(0, 6),
+        keywords: [...new Set([category, ...keywords])].slice(0, 6),
       };
     });
   } catch {
     return books.map((book) => ({
       ...book,
-      category: requestedCategory || "기타",
+      category: requestedCategory || getFallbackCategory(book),
+      keywords: createFallbackKeywords(book, requestedCategory || getFallbackCategory(book)),
     }));
   }
 }
@@ -186,7 +199,8 @@ module.exports = async function handler(request, response) {
   }
 
   const query = cleanText(request.query?.query).slice(0, 100);
-  const category = cleanText(request.query?.category).slice(0, 40);
+  const requestedCategory = cleanText(request.query?.category).slice(0, 40);
+  const category = BOOK_CATEGORIES.includes(requestedCategory) ? requestedCategory : "";
   const shouldEnrich = request.query?.enrich !== "0";
   const page = Math.min(Math.max(Number(request.query?.page) || 1, 1), 50);
   const size = Math.min(Math.max(Number(request.query?.size) || 20, 1), 50);
@@ -231,7 +245,7 @@ module.exports = async function handler(request, response) {
           publisher: cleanText(book.publisher),
           publishedDate: getPublishedDate(book.datetime),
           category,
-          keywords: createKeywords(query, category, title),
+          keywords: [],
           description,
           shortDescription:
             description.length > 110
@@ -244,7 +258,14 @@ module.exports = async function handler(request, response) {
       .filter((book) => book.title && book.author);
     const categorizedBooks = shouldEnrich
       ? await enrichBooksWithAI(books, category)
-      : books.map((book) => ({ ...book, category: category || "기타" }));
+      : books.map((book) => {
+        const fallbackCategory = category || getFallbackCategory(book);
+        return {
+          ...book,
+          category: fallbackCategory,
+          keywords: createFallbackKeywords(book, fallbackCategory),
+        };
+      });
 
     response.setHeader(
       "Cache-Control",

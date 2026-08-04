@@ -96,6 +96,7 @@
     </main>
     <dialog id="book-edit-dialog" class="admin-dialog">
       <div class="admin-dialog-heading"><div><p class="eyebrow">EDIT BOOK</p><h2>도서 정보 수정</h2></div><button id="close-book-edit" class="dialog-close" type="button" aria-label="닫기">×</button></div>
+      <p id="admin-book-edit-message" class="form-message dialog-form-message" role="alert" aria-live="assertive"></p>
       <form id="admin-book-edit-form" class="admin-book-form">
         <input type="hidden" name="originalId" />
         <input name="id" type="hidden" />
@@ -114,7 +115,6 @@
           <div class="admin-form-wide"><label for="edit-book-description">상세 설명</label><textarea id="edit-book-description" name="description" rows="4"></textarea></div>
         </div></details>
         <div class="admin-form-actions"><button class="button button-primary" type="submit">저장</button><button id="cancel-book-edit" class="button button-secondary" type="button">취소</button></div>
-        <p id="admin-book-edit-message" class="form-message admin-form-wide" role="alert"></p>
       </form>
     </dialog>
     <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Run&amp;Learn</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>

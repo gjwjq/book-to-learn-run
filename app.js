@@ -2638,16 +2638,20 @@ async function saveAdminBook(event) {
       loanStatus: "대출 가능",
     };
     const payload = serializeBookForDatabase(book);
-    // 수정은 기본키 충돌을 명시적으로 병합합니다. 같은 ID가 이미 있으면 새 행을
-    // 만들지 않고 해당 도서의 정보만 갱신합니다.
-    const editPayload = { ...payload, id: originalId };
-    const result = isEdit
-      ? await window.btlrSupabase
+    let result;
+    if (isEdit) {
+      // 기본키는 수정 대상 검색에만 사용하고 UPDATE 값에서는 제외합니다.
+      // 기존 도서를 다시 INSERT하는 경로가 없어 books_pkey 중복 오류가 발생하지 않습니다.
+      const { id: _ignoredId, ...updatePayload } = payload;
+      result = await window.btlrSupabase
         .from("books")
-        .upsert(editPayload, { onConflict: "id" })
+        .update(updatePayload)
+        .eq("id", originalId)
         .select("id")
-        .single()
-      : await window.btlrSupabase.from("books").insert(payload).select("id").single();
+        .maybeSingle();
+    } else {
+      result = await window.btlrSupabase.from("books").insert(payload).select("id").single();
+    }
 
     if (result.error) throw new Error(result.error.message);
     if (isEdit && !result.data) throw new Error("수정할 도서를 찾지 못했거나 수정 권한이 없습니다.");
@@ -2661,7 +2665,8 @@ async function saveAdminBook(event) {
   } catch (error) {
     const message = error?.message || "도서 정보를 저장하지 못했습니다.";
     showBookFormMessage(form, message);
-    showToast(message);
+    // modal dialog는 브라우저 top layer에 있으므로 수정 오류는 dialog 내부에 표시합니다.
+    if (!isEdit) showToast(message);
   } finally {
     if (submitButton) {
       submitButton.disabled = false;

@@ -3407,6 +3407,31 @@ img {
   margin-top: 4px;
 }
 
+.dialog-form-message {
+  display: none;
+  position: relative;
+  z-index: 2;
+  min-height: 0;
+  margin: -6px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #e7b9b0;
+  border-radius: 10px;
+  color: #a23f31;
+  background: #fff2ee;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.dialog-form-message:not(:empty) {
+  display: block;
+}
+
+.dialog-form-message.success {
+  border-color: #b9d8ca;
+  color: var(--green);
+  background: #eef8f3;
+}
+
 .dialog-close {
   width: 40px;
   height: 40px;

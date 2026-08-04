@@ -3094,6 +3094,14 @@ img {
   display: block;
 }
 
+.curated-import-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .curated-import-box p {
   margin: 4px 0 0;
   color: #74685e;

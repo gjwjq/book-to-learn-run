@@ -67,6 +67,8 @@ module.exports = async function handler(request, response) {
             author,
             publisher: String(input.publisher || "").trim().slice(0, 120),
             publishedDate: String(input.publishedDate || "").trim(),
+            description: String(input.description || "").trim().slice(0, 1200),
+            shortDescription: String(input.shortDescription || "").trim().slice(0, 300),
             category,
           }),
         }],

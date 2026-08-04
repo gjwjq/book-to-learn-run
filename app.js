@@ -288,6 +288,7 @@ let adminBookImportResults = [];
 let userBookSearchResults = [];
 let myBookRequestsCache = [];
 const PRIMARY_ADMIN_EMAIL = "umjunsick6015@gmail.com";
+const BOOK_CATEGORIES = ["자기계발", "진로/취업", "소설", "인문", "경제", "IT", "에세이"];
 const CURATED_CATEGORY_BOOKS = {
   "자기계발": [
     "행동하지 않으면 인생은 바뀌지 않는다",
@@ -1587,6 +1588,7 @@ async function initAdminPage() {
   document.getElementById("book-import-select-all")?.addEventListener("change", toggleAllImportBooks);
   document.getElementById("book-import-submit")?.addEventListener("click", importSelectedBooks);
   document.getElementById("curated-book-import")?.addEventListener("click", importCuratedCategoryBooks);
+  document.getElementById("repair-book-categories")?.addEventListener("click", repairExistingBookCategories);
   document.querySelectorAll("#admin-book-form, #admin-book-edit-form").forEach(bindBookFormEnhancements);
   await restoreAdminBookDraft();
 }
@@ -1851,6 +1853,89 @@ async function importCuratedCategoryBooks() {
   } catch (error) {
     const message = error?.message || "추천 도서를 추가하지 못했습니다.";
     setCuratedImportMessage(message);
+    showToast(message);
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+}
+
+function setBookCategoryRepairMessage(message, success = false) {
+  const target = document.getElementById("book-category-repair-message");
+  if (!target) return;
+  target.textContent = message || "";
+  target.classList.toggle("success", success);
+}
+
+async function repairExistingBookCategories() {
+  const button = document.getElementById("repair-book-categories");
+  if (!button || !window.btlrSupabase) return;
+
+  const invalidBooks = getBooks().filter((book) => !BOOK_CATEGORIES.includes(String(book.category || "").trim()));
+  if (!invalidBooks.length) {
+    setBookCategoryRepairMessage("정리할 카테고리가 없습니다.", true);
+    return;
+  }
+  if (!window.confirm(`잘못 분류된 도서 ${invalidBooks.length}권을 AI로 다시 분류할까요?`)) return;
+
+  const { data: sessionData } = await window.btlrSupabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) {
+    setBookCategoryRepairMessage("관리자 로그인이 필요합니다.");
+    return;
+  }
+
+  const originalText = button.textContent;
+  button.disabled = true;
+  let repairedCount = 0;
+  const failedTitles = [];
+
+  try {
+    for (let index = 0; index < invalidBooks.length; index += 1) {
+      const book = invalidBooks[index];
+      button.textContent = `${index + 1}/${invalidBooks.length} 분류 중`;
+      setBookCategoryRepairMessage(`'${book.title}'의 카테고리를 확인하고 있습니다.`);
+
+      try {
+        const response = await fetch("/api/generate-book-metadata", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            title: book.title,
+            author: book.author,
+            publisher: book.publisher || "",
+            publishedDate: book.publishedDate || "",
+            description: book.description || "",
+            shortDescription: book.shortDescription || "",
+            category: "",
+          }),
+        });
+        const metadata = await response.json();
+        if (!response.ok) throw new Error(metadata.message || "AI 분류에 실패했습니다.");
+        if (!BOOK_CATEGORIES.includes(metadata.category)) throw new Error("올바른 카테고리를 받지 못했습니다.");
+
+        const keywords = Array.isArray(metadata.keywords)
+          ? [...new Set(metadata.keywords.map((keyword) => String(keyword).trim()).filter(Boolean))].slice(0, 6)
+          : [];
+        const { error } = await window.btlrSupabase
+          .from("books")
+          .update({ category: metadata.category, keywords })
+          .eq("id", book.id);
+        if (error) throw new Error(error.message);
+        repairedCount += 1;
+      } catch {
+        failedTitles.push(book.title);
+      }
+    }
+
+    await renderAdminBooks();
+    const message = failedTitles.length
+      ? `${repairedCount}권을 정리했습니다. ${failedTitles.length}권은 다시 시도해 주세요.`
+      : `${repairedCount}권의 카테고리를 정리했습니다.`;
+    setBookCategoryRepairMessage(message, failedTitles.length === 0);
     showToast(message);
   } finally {
     button.disabled = false;
@@ -2337,8 +2422,7 @@ async function fillBookMetadataWithAI(form) {
       shortDescription: result.shortDescription,
       description: result.description,
     };
-    const validCategories = new Set(["자기계발", "진로/취업", "소설", "인문", "경제", "IT", "에세이"]);
-    const shouldRepairClassification = !validCategories.has(String(form.elements.category?.value || "").trim());
+    const shouldRepairClassification = !BOOK_CATEGORIES.includes(String(form.elements.category?.value || "").trim());
     Object.entries(fieldMap).forEach(([name, value]) => {
       const field = form.elements[name];
       const replaceInvalidClassification = shouldRepairClassification && (name === "category" || name === "keywords");

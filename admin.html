@@ -44,7 +44,11 @@
               </div>
               <div class="curated-import-box">
                 <div><strong>관심사별 기본 도서 채우기</strong><p>7개 카테고리에 잘 알려진 도서를 5권씩 카카오 도서 API에서 찾아 등록합니다.</p></div>
-                <button id="curated-book-import" class="button button-secondary" type="button">추천 도서 35권 추가</button>
+                <div class="curated-import-actions">
+                  <button id="repair-book-categories" class="button button-secondary" type="button">기존 카테고리 AI 정리</button>
+                  <button id="curated-book-import" class="button button-secondary" type="button">추천 도서 35권 추가</button>
+                </div>
+                <p id="book-category-repair-message" class="form-message" role="status" aria-live="polite"></p>
                 <p id="curated-book-import-message" class="form-message" role="status" aria-live="polite"></p>
               </div>
               <form id="book-import-search-form" class="book-import-search">

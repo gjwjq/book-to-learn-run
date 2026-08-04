@@ -1588,8 +1588,8 @@ async function initAdminPage() {
   document.getElementById("refresh-users")?.addEventListener("click", renderAdminUsers);
   document.getElementById("refresh-book-requests")?.addEventListener("click", renderAdminBookRequests);
   document.getElementById("reset-book-create")?.addEventListener("click", resetAdminBookForm);
-  document.getElementById("admin-book-form")?.addEventListener("submit", saveAdminBook);
-  document.getElementById("admin-book-edit-form")?.addEventListener("submit", saveAdminBook);
+  document.getElementById("admin-book-form")?.addEventListener("submit", saveNewAdminBook);
+  document.getElementById("admin-book-edit-form")?.addEventListener("submit", saveEditedAdminBook);
   document.getElementById("close-book-edit")?.addEventListener("click", closeAdminBookDialog);
   document.getElementById("cancel-book-edit")?.addEventListener("click", closeAdminBookDialog);
   document.getElementById("admin-user-list")?.addEventListener("click", handleAdminUserAction);
@@ -2427,7 +2427,6 @@ function fillAdminBookForm(book, form) {
   if (form.elements.originalTotalQuantity) {
     form.elements.originalTotalQuantity.value = String(book.totalQuantity ?? 1);
   }
-  form.elements.id.value = book.id;
   form.elements.title.value = book.title;
   form.elements.author.value = book.author;
   form.elements.publisher.value = book.publisher || "";
@@ -2585,10 +2584,20 @@ function closeAdminBookDialog() {
   document.getElementById("book-edit-dialog")?.close();
 }
 
-async function saveAdminBook(event) {
+function saveNewAdminBook(event) {
   event.preventDefault();
-  const form = event.currentTarget;
-  const isEdit = form.id === "admin-book-edit-form";
+  return saveAdminBook(event.currentTarget, false);
+}
+
+function saveEditedAdminBook(event) {
+  event.preventDefault();
+  // 수정은 이벤트 대상이나 폼 ID를 추론하지 않고 수정 폼을 명시적으로 사용합니다.
+  const form = document.getElementById("admin-book-edit-form");
+  if (!form) return undefined;
+  return saveAdminBook(form, true);
+}
+
+async function saveAdminBook(form, isEdit) {
   const submitButton = form.querySelector('button[type="submit"]');
   const originalButtonText = submitButton?.textContent || "저장";
 

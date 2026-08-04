@@ -98,7 +98,6 @@
       <form id="admin-book-edit-form" class="admin-book-form">
         <input type="hidden" name="originalId" />
         <input type="hidden" name="originalTotalQuantity" />
-        <input name="id" type="hidden" />
         <input name="thumbnail" type="hidden" />
         <div><label for="edit-book-title">제목</label><input id="edit-book-title" name="title" type="text" required /></div>
         <div><label for="edit-book-author">저자</label><input id="edit-book-author" name="author" type="text" required /></div>
@@ -113,7 +112,7 @@
           <div class="admin-form-wide"><label for="edit-book-short">짧은 소개</label><input id="edit-book-short" name="shortDescription" type="text" /></div>
           <div class="admin-form-wide"><label for="edit-book-description">상세 설명</label><textarea id="edit-book-description" name="description" rows="4"></textarea></div>
         </div></details>
-        <div class="admin-form-actions"><button class="button button-primary" type="submit">저장</button><button id="cancel-book-edit" class="button button-secondary" type="button">취소</button></div>
+        <div class="admin-form-actions"><button id="save-book-edit" class="button button-primary" type="submit">저장</button><button id="cancel-book-edit" class="button button-secondary" type="button">취소</button></div>
       </form>
     </dialog>
     <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Run&amp;Learn</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>

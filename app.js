@@ -1209,7 +1209,7 @@ async function initHomeBookRequest() {
 }
 
 function initSearchPage() {
-  const query = (getQueryParam("q") || "").trim();
+  let query = (getQueryParam("q") || "").trim();
   const categoryParam = getQueryParam("category") || "전체";
   const statusParam = getQueryParam("status") || "전체";
   const categoryFilter = document.getElementById("category-filter");
@@ -1261,10 +1261,17 @@ function initSearchPage() {
   };
 
   categoryFilter?.addEventListener("change", () => {
-    if (categoryFilter.value === "전체" && query) {
-      window.location.href = "search.html";
-      return;
+    // 카테고리를 직접 바꾸면 이전 텍스트 검색은 끝난 것으로 처리합니다.
+    // 검색어와 새 카테고리가 의도치 않게 동시에 적용되어 결과가 사라지는 일을 막습니다.
+    if (query) {
+      query = "";
+      if (headerInput) headerInput.value = "";
     }
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.delete("q");
+    if (categoryFilter.value === "전체") nextUrl.searchParams.delete("category");
+    else nextUrl.searchParams.set("category", categoryFilter.value);
+    window.history.replaceState({}, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
     updateResults();
   });
   sortFilter?.addEventListener("change", updateResults);

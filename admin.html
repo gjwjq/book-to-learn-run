@@ -86,6 +86,12 @@
               <div class="admin-form-actions"><button class="button button-primary" type="submit">도서 추가</button><button id="reset-book-create" class="button button-secondary" type="button">입력 초기화</button></div>
               <p id="admin-book-message" class="form-message admin-form-wide" role="alert"></p>
             </form>
+            <div id="admin-book-bulk-toolbar" class="admin-book-bulk-toolbar">
+              <label><input id="admin-book-select-page" type="checkbox" /> 현재 페이지 전체 선택</label>
+              <span id="admin-book-selected-count">0권 선택</span>
+              <button id="admin-book-clear-selection" class="button button-secondary" type="button" disabled>선택 해제</button>
+              <button id="admin-book-delete-selected" class="button button-danger" type="button" disabled>선택 도서 삭제</button>
+            </div>
             <div id="admin-book-list" class="admin-book-list"></div>
             <nav id="admin-book-pagination" class="admin-pagination" aria-label="도서 목록 페이지"></nav>
           </section>

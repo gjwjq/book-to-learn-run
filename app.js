@@ -290,6 +290,7 @@ let myBookRequestsCache = [];
 let adminUsersCache = [];
 let adminUserPage = 1;
 let adminBookPage = 1;
+const adminSelectedBookIds = new Set();
 const ADMIN_PAGE_SIZE = 20;
 const PRIMARY_ADMIN_EMAIL = "umjunsick6015@gmail.com";
 const BOOK_CATEGORIES = ["자기계발", "진로/취업", "소설", "인문", "경제", "IT", "에세이"];
@@ -1588,6 +1589,10 @@ async function initAdminPage() {
   document.getElementById("cancel-book-edit")?.addEventListener("click", closeAdminBookDialog);
   document.getElementById("admin-user-list")?.addEventListener("click", handleAdminUserAction);
   document.getElementById("admin-book-list")?.addEventListener("click", handleAdminBookAction);
+  document.getElementById("admin-book-list")?.addEventListener("change", handleAdminBookSelection);
+  document.getElementById("admin-book-select-page")?.addEventListener("change", toggleAdminBookPageSelection);
+  document.getElementById("admin-book-clear-selection")?.addEventListener("click", clearAdminBookSelection);
+  document.getElementById("admin-book-delete-selected")?.addEventListener("click", deleteSelectedAdminBooks);
   document.getElementById("admin-user-pagination")?.addEventListener("click", handleAdminPagination);
   document.getElementById("admin-book-pagination")?.addEventListener("click", handleAdminPagination);
   document.getElementById("admin-book-request-list")?.addEventListener("click", handleAdminBookRequestAction);
@@ -2313,9 +2318,14 @@ function renderAdminBookPage() {
   const target = document.getElementById("admin-book-list");
   if (!target) return;
   const books = getBooks();
+  const existingIds = new Set(books.map((book) => book.id));
+  [...adminSelectedBookIds].forEach((id) => {
+    if (!existingIds.has(id)) adminSelectedBookIds.delete(id);
+  });
   if (!books.length) {
     target.innerHTML = '<p class="admin-empty">등록된 도서가 없습니다.</p>';
     renderAdminPagination("books", 0);
+    updateAdminBookBulkToolbar([]);
     return;
   }
   const totalPages = Math.ceil(books.length / ADMIN_PAGE_SIZE);
@@ -2324,12 +2334,90 @@ function renderAdminBookPage() {
   const visibleBooks = books.slice(startIndex, startIndex + ADMIN_PAGE_SIZE);
   target.innerHTML = visibleBooks.map((book) => `
     <article class="admin-book-row">
+      <label class="admin-book-check" aria-label="${escapeHTML(book.title)} 선택"><input type="checkbox" data-admin-book-select value="${escapeHTML(book.id)}" ${adminSelectedBookIds.has(book.id) ? "checked" : ""} /></label>
       <img src="${escapeHTML(book.thumbnail)}" alt="" onerror="this.hidden=true" />
-      <div><strong>${escapeHTML(book.title)}</strong><span>${escapeHTML(book.author)} · ${escapeHTML(book.publisher)}</span><small>${escapeHTML(book.id)} · ${escapeHTML(book.category)} · 재고 ${book.availableQuantity ?? 1}/${book.totalQuantity ?? 1}권</small></div>
+      <div class="admin-book-copy"><strong>${escapeHTML(book.title)}</strong><span>${escapeHTML(book.author)} · ${escapeHTML(book.publisher)}</span><small>${escapeHTML(book.id)} · ${escapeHTML(book.category)} · 재고 ${book.availableQuantity ?? 1}/${book.totalQuantity ?? 1}권</small></div>
       <div class="admin-row-actions"><button type="button" data-admin-book-action="edit" data-book-id="${escapeHTML(book.id)}">수정</button><button type="button" data-admin-book-action="delete" data-book-id="${escapeHTML(book.id)}">삭제</button></div>
     </article>
   `).join("");
   renderAdminPagination("books", books.length);
+  updateAdminBookBulkToolbar(visibleBooks);
+}
+
+function getVisibleAdminBooks() {
+  const books = getBooks();
+  const startIndex = (adminBookPage - 1) * ADMIN_PAGE_SIZE;
+  return books.slice(startIndex, startIndex + ADMIN_PAGE_SIZE);
+}
+
+function updateAdminBookBulkToolbar(visibleBooks = getVisibleAdminBooks()) {
+  const selectPage = document.getElementById("admin-book-select-page");
+  const count = document.getElementById("admin-book-selected-count");
+  const clearButton = document.getElementById("admin-book-clear-selection");
+  const deleteButton = document.getElementById("admin-book-delete-selected");
+  const selectedOnPage = visibleBooks.filter((book) => adminSelectedBookIds.has(book.id)).length;
+  const hasSelection = adminSelectedBookIds.size > 0;
+
+  if (selectPage) {
+    selectPage.checked = visibleBooks.length > 0 && selectedOnPage === visibleBooks.length;
+    selectPage.indeterminate = selectedOnPage > 0 && selectedOnPage < visibleBooks.length;
+    selectPage.disabled = visibleBooks.length === 0;
+  }
+  if (count) count.textContent = `${adminSelectedBookIds.size}권 선택`;
+  if (clearButton) clearButton.disabled = !hasSelection;
+  if (deleteButton) deleteButton.disabled = !hasSelection;
+}
+
+function handleAdminBookSelection(event) {
+  const checkbox = event.target.closest("[data-admin-book-select]");
+  if (!checkbox) return;
+  if (checkbox.checked) adminSelectedBookIds.add(checkbox.value);
+  else adminSelectedBookIds.delete(checkbox.value);
+  updateAdminBookBulkToolbar();
+}
+
+function toggleAdminBookPageSelection(event) {
+  getVisibleAdminBooks().forEach((book) => {
+    if (event.currentTarget.checked) adminSelectedBookIds.add(book.id);
+    else adminSelectedBookIds.delete(book.id);
+  });
+  renderAdminBookPage();
+}
+
+function clearAdminBookSelection() {
+  adminSelectedBookIds.clear();
+  renderAdminBookPage();
+}
+
+async function deleteSelectedAdminBooks() {
+  const ids = [...adminSelectedBookIds];
+  if (!ids.length || !window.btlrSupabase) return;
+  if (!window.confirm(`선택한 도서 ${ids.length}권을 삭제할까요? 삭제한 도서는 복구할 수 없습니다.`)) return;
+
+  const button = document.getElementById("admin-book-delete-selected");
+  const originalText = button?.textContent || "선택 도서 삭제";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "삭제 중...";
+  }
+
+  try {
+    for (let index = 0; index < ids.length; index += 50) {
+      const { error } = await window.btlrSupabase
+        .from("books")
+        .delete()
+        .in("id", ids.slice(index, index + 50));
+      if (error) throw error;
+    }
+    adminSelectedBookIds.clear();
+    showToast(`${ids.length}권을 삭제했습니다.`);
+    await renderAdminBooks();
+  } catch (error) {
+    showToast(error?.message || "선택한 도서를 삭제하지 못했습니다.");
+  } finally {
+    if (button) button.textContent = originalText;
+    updateAdminBookBulkToolbar();
+  }
 }
 
 function resetAdminBookForm() {

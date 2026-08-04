@@ -1944,16 +1944,25 @@ function setBookCategoryRepairMessage(message, success = false) {
   target.classList.toggle("success", success);
 }
 
+function isBookDescriptionIncomplete(book) {
+  const description = String(book?.description || "").trim();
+  if (!description || /(?:\.{2,}|…+)\s*$/.test(description)) return true;
+  return !/[.!?。！？]["'”’」』)]?\s*$/.test(description);
+}
+
 async function repairExistingBookCategories() {
   const button = document.getElementById("repair-book-categories");
   if (!button || !window.btlrSupabase) return;
 
-  const invalidBooks = getBooks().filter((book) => !BOOK_CATEGORIES.includes(String(book.category || "").trim()));
-  if (!invalidBooks.length) {
-    setBookCategoryRepairMessage("정리할 카테고리가 없습니다.", true);
+  const booksToRepair = getBooks().filter((book) => (
+    !BOOK_CATEGORIES.includes(String(book.category || "").trim())
+    || isBookDescriptionIncomplete(book)
+  ));
+  if (!booksToRepair.length) {
+    setBookCategoryRepairMessage("정리할 도서 정보가 없습니다.", true);
     return;
   }
-  if (!window.confirm(`잘못 분류된 도서 ${invalidBooks.length}권을 AI로 다시 분류할까요?`)) return;
+  if (!window.confirm(`분류가 잘못됐거나 설명이 잘린 도서 ${booksToRepair.length}권을 AI로 정리할까요?`)) return;
 
   const { data: sessionData } = await window.btlrSupabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
@@ -1968,10 +1977,10 @@ async function repairExistingBookCategories() {
   const failedTitles = [];
 
   try {
-    for (let index = 0; index < invalidBooks.length; index += 1) {
-      const book = invalidBooks[index];
-      button.textContent = `${index + 1}/${invalidBooks.length} 분류 중`;
-      setBookCategoryRepairMessage(`'${book.title}'의 카테고리를 확인하고 있습니다.`);
+    for (let index = 0; index < booksToRepair.length; index += 1) {
+      const book = booksToRepair[index];
+      button.textContent = `${index + 1}/${booksToRepair.length} 정리 중`;
+      setBookCategoryRepairMessage(`'${book.title}'의 분류와 설명을 확인하고 있습니다.`);
 
       try {
         const response = await fetch("/api/generate-book-metadata", {
@@ -1987,7 +1996,7 @@ async function repairExistingBookCategories() {
             publishedDate: book.publishedDate || "",
             description: book.description || "",
             shortDescription: book.shortDescription || "",
-            category: "",
+            category: BOOK_CATEGORIES.includes(String(book.category || "").trim()) ? book.category : "",
           }),
         });
         const metadata = await response.json();
@@ -1999,7 +2008,12 @@ async function repairExistingBookCategories() {
           : [];
         const { error } = await window.btlrSupabase
           .from("books")
-          .update({ category: metadata.category, keywords })
+          .update({
+            category: metadata.category,
+            keywords,
+            description: String(metadata.description || "").trim(),
+            short_description: String(metadata.shortDescription || "").trim(),
+          })
           .eq("id", book.id);
         if (error) throw new Error(error.message);
         repairedCount += 1;
@@ -2011,7 +2025,7 @@ async function repairExistingBookCategories() {
     await renderAdminBooks();
     const message = failedTitles.length
       ? `${repairedCount}권을 정리했습니다. ${failedTitles.length}권은 다시 시도해 주세요.`
-      : `${repairedCount}권의 카테고리를 정리했습니다.`;
+      : `${repairedCount}권의 분류와 설명을 정리했습니다.`;
     setBookCategoryRepairMessage(message, failedTitles.length === 0);
     showToast(message);
   } finally {
@@ -2499,6 +2513,8 @@ async function fillBookMetadataWithAI(form) {
         publisher: String(values.publisher || "").trim(),
         publishedDate: values.publishedDate || "",
         category: String(values.category || "").trim(),
+        description: String(values.description || "").trim(),
+        shortDescription: String(values.shortDescription || "").trim(),
       }),
     });
     const result = await response.json();
@@ -2514,10 +2530,12 @@ async function fillBookMetadataWithAI(form) {
       description: result.description,
     };
     const shouldRepairClassification = !BOOK_CATEGORIES.includes(String(form.elements.category?.value || "").trim());
+    const shouldRepairDescription = isBookDescriptionIncomplete({ description: form.elements.description?.value });
     Object.entries(fieldMap).forEach(([name, value]) => {
       const field = form.elements[name];
       const replaceInvalidClassification = shouldRepairClassification && (name === "category" || name === "keywords");
-      if (field && (!String(field.value || "").trim() || replaceInvalidClassification) && value) field.value = value;
+      const replaceIncompleteDescription = shouldRepairDescription && (name === "shortDescription" || name === "description");
+      if (field && (!String(field.value || "").trim() || replaceInvalidClassification || replaceIncompleteDescription) && value) field.value = value;
     });
     form.querySelector(".admin-auto-fields")?.setAttribute("open", "");
     return { success: true, message: "AI가 빈 도서 정보를 채웠습니다. 저장 전에 확인해 주세요." };

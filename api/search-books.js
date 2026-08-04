@@ -74,12 +74,28 @@ function createFallbackKeywords(book, category) {
   return [...new Set([category, ...genres])].slice(0, 6);
 }
 
+function getCompleteFallbackDescription(book) {
+  const description = cleanText(book.description).replace(/\.{2,}|…+$/g, "").trim();
+  const lastSentenceEnd = Math.max(
+    description.lastIndexOf("."),
+    description.lastIndexOf("!"),
+    description.lastIndexOf("?"),
+    description.lastIndexOf("。"),
+    description.lastIndexOf("！"),
+    description.lastIndexOf("？"),
+  );
+  if (lastSentenceEnd >= 20) return description.slice(0, lastSentenceEnd + 1).trim();
+  return `${book.author}의 『${book.title}』입니다.`;
+}
+
 async function enrichBooksWithAI(books, requestedCategory = "") {
   if (!books.length || !process.env.GEMINI_API_KEY) {
     return books.map((book) => ({
       ...book,
       category: requestedCategory || getFallbackCategory(book),
       keywords: createFallbackKeywords(book, requestedCategory || getFallbackCategory(book)),
+      description: getCompleteFallbackDescription(book),
+      shortDescription: getCompleteFallbackDescription(book),
     }));
   }
 
@@ -105,7 +121,9 @@ async function enrichBooksWithAI(books, requestedCategory = "") {
                 "책 제목이나 검색어를 카테고리로 사용하지 마세요.",
                 "추리·미스터리·스릴러 작품은 카테고리를 '소설'로 분류하고, 세부 장르는 키워드에 넣으세요.",
                 "키워드는 제목을 그대로 복사하지 말고 장르와 핵심 주제를 3~6개 작성하세요.",
-                "원본 소개가 비어 있거나 말줄임표로 끊겼다면 주어진 정보 안에서 자연스러운 한국어 소개 1~2문장으로 정리하세요.",
+                "description은 2~3개의 완결된 한국어 문장으로 350자 이내에서 작성하세요.",
+                "shortDescription은 핵심을 담은 하나의 완결된 한국어 문장으로 100자 이내에서 작성하세요.",
+                "모든 설명은 반드시 마침표로 끝내고, 원본 소개가 문장 중간에서 끊겼다면 그대로 복사하지 말고 완결된 문장으로 다시 정리하세요.",
                 "확인할 수 없는 줄거리나 사실은 새로 지어내지 마세요. 원본 소개가 완전하면 의미를 유지하세요.",
               ].join(" "),
             }],
@@ -132,12 +150,13 @@ async function enrichBooksWithAI(books, requestedCategory = "") {
                   index: { type: "integer" },
                   category: { type: "string", enum: BOOK_CATEGORIES },
                   keywords: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 6 },
+                  shortDescription: { type: "string" },
                   description: { type: "string" },
                 },
-                required: ["index", "category", "keywords", "description"],
+                required: ["index", "category", "keywords", "shortDescription", "description"],
               },
             },
-            maxOutputTokens: 3000,
+            maxOutputTokens: 8192,
           },
         }),
       },
@@ -158,7 +177,14 @@ async function enrichBooksWithAI(books, requestedCategory = "") {
     return books.map((book, index) => {
       const metadata = metadataByIndex.get(index);
       const category = requestedCategory || metadata?.category || getFallbackCategory(book);
-      const description = cleanText(metadata?.description) || book.description;
+      const generatedDescription = cleanText(metadata?.description);
+      const description = generatedDescription
+        ? getCompleteFallbackDescription({ ...book, description: generatedDescription })
+        : getCompleteFallbackDescription(book);
+      const generatedShortDescription = cleanText(metadata?.shortDescription);
+      const shortDescription = generatedShortDescription
+        ? getCompleteFallbackDescription({ ...book, description: generatedShortDescription })
+        : description;
       const keywords = Array.isArray(metadata?.keywords)
         ? metadata.keywords.map(cleanText).filter(Boolean)
         : createFallbackKeywords(book, category);
@@ -166,7 +192,7 @@ async function enrichBooksWithAI(books, requestedCategory = "") {
         ...book,
         category,
         description,
-        shortDescription: description,
+        shortDescription,
         keywords: [...new Set([category, ...keywords])].slice(0, 6),
       };
     });
@@ -175,6 +201,8 @@ async function enrichBooksWithAI(books, requestedCategory = "") {
       ...book,
       category: requestedCategory || getFallbackCategory(book),
       keywords: createFallbackKeywords(book, requestedCategory || getFallbackCategory(book)),
+      description: getCompleteFallbackDescription(book),
+      shortDescription: getCompleteFallbackDescription(book),
     }));
   }
 }
@@ -264,6 +292,8 @@ module.exports = async function handler(request, response) {
           ...book,
           category: fallbackCategory,
           keywords: createFallbackKeywords(book, fallbackCategory),
+          description: getCompleteFallbackDescription(book),
+          shortDescription: getCompleteFallbackDescription(book),
         };
       });
 

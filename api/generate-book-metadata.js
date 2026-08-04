@@ -18,6 +18,20 @@ async function getAdminUser(authorization) {
   return profiles[0]?.role === "admin" ? user : null;
 }
 
+function finishDescription(value, fallback) {
+  const description = String(value || "").replace(/\s+/g, " ").trim().replace(/\.{2,}|…+$/g, "").trim();
+  const lastSentenceEnd = Math.max(
+    description.lastIndexOf("."),
+    description.lastIndexOf("!"),
+    description.lastIndexOf("?"),
+    description.lastIndexOf("。"),
+    description.lastIndexOf("！"),
+    description.lastIndexOf("？"),
+  );
+  if (lastSentenceEnd >= 10) return description.slice(0, lastSentenceEnd + 1).trim();
+  return fallback;
+}
+
 module.exports = async function handler(request, response) {
   if (request.method !== "POST") {
     response.setHeader("Allow", "POST");
@@ -54,7 +68,12 @@ module.exports = async function handler(request, response) {
             "제공된 제목과 저자를 기반으로 한국어 메타데이터를 간결하고 사실적으로 작성하세요.",
             `카테고리는 반드시 다음 중 하나만 사용하세요: ${BOOK_CATEGORIES.join(", ")}.`,
             "책 제목을 카테고리로 복사하지 마세요. 추리·미스터리·스릴러 작품의 카테고리는 '소설'이며 세부 장르는 키워드에 넣으세요.",
+            "입력 category가 비어 있지 않으면 해당 카테고리를 유지하세요.",
             "키워드는 제목 자체가 아니라 장르와 핵심 주제를 3~6개 작성하세요.",
+            "shortDescription은 100자 이내의 완결된 한 문장으로 작성하세요.",
+            "description은 350자 이내의 완결된 2~3문장으로 작성하세요.",
+            "입력 설명이 문장 중간에서 끊겼거나 말줄임표로 끝나면 그대로 복사하지 말고, 주어진 정보 안에서 완결된 문장으로 다시 작성하세요.",
+            "shortDescription과 description은 반드시 문장부호로 끝내세요.",
             "책의 내용을 확실히 알 수 없으면 과장하거나 구체적 사실을 지어내지 말고 일반적인 수준으로 작성하세요.",
           ].join(" "),
         }],
@@ -88,7 +107,7 @@ module.exports = async function handler(request, response) {
             },
             required: ["author", "publisher", "publishedDate", "category", "keywords", "shortDescription", "description"],
         },
-        maxOutputTokens: 1200,
+        maxOutputTokens: 2000,
       },
     }),
   });
@@ -104,6 +123,9 @@ module.exports = async function handler(request, response) {
       .join("");
     if (!outputText) throw new Error("empty response");
     const metadata = JSON.parse(outputText);
+    const genericDescription = `${author}의 『${title}』입니다.`;
+    metadata.description = finishDescription(metadata.description, genericDescription);
+    metadata.shortDescription = finishDescription(metadata.shortDescription, genericDescription);
     return response.status(200).json(metadata);
   } catch {
     return response.status(502).json({ message: "AI 응답을 도서 정보로 변환하지 못했습니다." });

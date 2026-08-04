@@ -1357,7 +1357,7 @@ function initDetailPage() {
   const actionButton = getCurrentUser()?.role === "admin"
     ? '<button class="button button-primary is-disabled" type="button" disabled>관리자 계정은 대출할 수 없습니다</button>'
     : loaned
-      ? '<button class="button button-primary is-disabled" type="button" disabled>현재 대여 중인 도서입니다</button>'
+      ? '<button class="button button-primary is-disabled" type="button" disabled>현재 대여 중</button>'
     : (book.availableQuantity ?? (book.loanStatus === "대출 가능" ? 1 : 0)) > 0
       ? `<button class="button button-primary" type="button" data-action="borrow" data-book-id="${book.id}">대출하기</button>`
       : `<a class="button button-primary" href="reserve.html?id=${encodeURIComponent(book.id)}">예약 신청</a>`;
@@ -1950,6 +1950,45 @@ function isBookDescriptionIncomplete(book) {
   return !/[.!?。！？]["'”’」』)]?\s*$/.test(description);
 }
 
+function waitForBookRepair(milliseconds) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+async function requestBookRepairMetadata(book, accessToken) {
+  const retryDelays = [1800, 4000];
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
+    const response = await fetch("/api/generate-book-metadata", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        title: book.title,
+        author: book.author,
+        publisher: book.publisher || "",
+        publishedDate: book.publishedDate || "",
+        description: book.description || "",
+        shortDescription: book.shortDescription || "",
+        category: BOOK_CATEGORIES.includes(String(book.category || "").trim()) ? book.category : "",
+      }),
+    });
+    const metadata = await response.json().catch(() => ({}));
+    if (response.ok) return metadata;
+
+    const error = new Error(metadata.message || `AI 요청 실패 (${response.status})`);
+    error.status = response.status;
+    error.retryable = metadata.retryable === true || [429, 502, 503].includes(response.status);
+    lastError = error;
+    if (!error.retryable || attempt === retryDelays.length) throw error;
+    await waitForBookRepair(retryDelays[attempt]);
+  }
+
+  throw lastError || new Error("AI 도서 정리에 실패했습니다.");
+}
+
 async function repairExistingBookCategories() {
   const button = document.getElementById("repair-book-categories");
   if (!button || !window.btlrSupabase) return;
@@ -1974,7 +2013,10 @@ async function repairExistingBookCategories() {
   const originalText = button.textContent;
   button.disabled = true;
   let repairedCount = 0;
-  const failedTitles = [];
+  const failures = [];
+  let stoppedReason = "";
+  let skippedCount = 0;
+  let consecutiveFailures = 0;
 
   try {
     for (let index = 0; index < booksToRepair.length; index += 1) {
@@ -1983,30 +2025,13 @@ async function repairExistingBookCategories() {
       setBookCategoryRepairMessage(`'${book.title}'의 분류와 설명을 확인하고 있습니다.`);
 
       try {
-        const response = await fetch("/api/generate-book-metadata", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            title: book.title,
-            author: book.author,
-            publisher: book.publisher || "",
-            publishedDate: book.publishedDate || "",
-            description: book.description || "",
-            shortDescription: book.shortDescription || "",
-            category: BOOK_CATEGORIES.includes(String(book.category || "").trim()) ? book.category : "",
-          }),
-        });
-        const metadata = await response.json();
-        if (!response.ok) throw new Error(metadata.message || "AI 분류에 실패했습니다.");
+        const metadata = await requestBookRepairMetadata(book, accessToken);
         if (!BOOK_CATEGORIES.includes(metadata.category)) throw new Error("올바른 카테고리를 받지 못했습니다.");
 
         const keywords = Array.isArray(metadata.keywords)
           ? [...new Set(metadata.keywords.map((keyword) => String(keyword).trim()).filter(Boolean))].slice(0, 6)
           : [];
-        const { error } = await window.btlrSupabase
+        const { data, error } = await window.btlrSupabase
           .from("books")
           .update({
             category: metadata.category,
@@ -2014,19 +2039,37 @@ async function repairExistingBookCategories() {
             description: String(metadata.description || "").trim(),
             short_description: String(metadata.shortDescription || "").trim(),
           })
-          .eq("id", book.id);
+          .eq("id", book.id)
+          .select("id")
+          .maybeSingle();
         if (error) throw new Error(error.message);
+        if (!data) throw new Error("도서 수정 권한이 없거나 해당 도서를 찾지 못했습니다.");
         repairedCount += 1;
-      } catch {
-        failedTitles.push(book.title);
+        consecutiveFailures = 0;
+      } catch (error) {
+        const reason = error?.message || "알 수 없는 오류";
+        failures.push({ title: book.title, reason });
+        consecutiveFailures += 1;
+        const permanentFailure = [400, 401, 403, 404].includes(error?.status)
+          || /API.?키|환경변수|관리자 권한|model.*(?:not found|available)/i.test(reason);
+        if (permanentFailure || consecutiveFailures >= 3) {
+          stoppedReason = reason;
+          skippedCount = booksToRepair.length - index - 1;
+          break;
+        }
       }
+
+      // 무료 API의 분당 요청 제한을 피하기 위해 도서 사이에 간격을 둡니다.
+      if (index < booksToRepair.length - 1) await waitForBookRepair(1200);
     }
 
     await renderAdminBooks();
-    const message = failedTitles.length
-      ? `${repairedCount}권을 정리했습니다. ${failedTitles.length}권은 다시 시도해 주세요.`
+    const firstFailure = failures[0];
+    const failureSummary = stoppedReason || firstFailure?.reason || "";
+    const message = failures.length
+      ? `${repairedCount}권 정리, ${failures.length}권 실패${skippedCount ? `, ${skippedCount}권 미처리` : ""}${failureSummary ? ` — 원인: ${failureSummary}` : ""}`
       : `${repairedCount}권의 분류와 설명을 정리했습니다.`;
-    setBookCategoryRepairMessage(message, failedTitles.length === 0);
+    setBookCategoryRepairMessage(message, failures.length === 0);
     showToast(message);
   } finally {
     button.disabled = false;

@@ -114,7 +114,13 @@ module.exports = async function handler(request, response) {
 
   const result = await apiResponse.json();
   if (!apiResponse.ok) {
-    return response.status(502).json({ message: result.error?.message || "Gemini API 요청에 실패했습니다." });
+    const retryable = apiResponse.status === 429 || apiResponse.status >= 500;
+    const status = apiResponse.status === 429 ? 429 : (retryable ? 503 : 502);
+    return response.status(status).json({
+      message: result.error?.message || "Gemini API 요청에 실패했습니다.",
+      retryable,
+      upstreamStatus: apiResponse.status,
+    });
   }
 
   try {

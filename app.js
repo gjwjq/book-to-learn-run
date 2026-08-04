@@ -2442,8 +2442,11 @@ async function saveAdminBook(event) {
       loanStatus: "대출 가능",
     };
     const payload = serializeBookForDatabase(book);
+    // 도서 ID는 기본키이므로 기존 도서를 수정할 때 다시 전송하지 않습니다.
+    // 수정 폼의 hidden id가 다른 값으로 바뀌어도 기존 행의 기본키를 건드리지 않게 합니다.
+    const { id: _bookId, ...updatePayload } = payload;
     const result = isEdit
-      ? await window.btlrSupabase.from("books").update(payload).eq("id", originalId).select("id").maybeSingle()
+      ? await window.btlrSupabase.from("books").update(updatePayload).eq("id", originalId).select("id").maybeSingle()
       : await window.btlrSupabase.from("books").insert(payload).select("id").single();
 
     if (result.error) throw new Error(result.error.message);

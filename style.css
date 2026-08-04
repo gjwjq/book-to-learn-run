@@ -3077,6 +3077,34 @@ img {
   color: #74685e;
 }
 
+.curated-import-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 18px;
+  margin-top: 18px;
+  padding: 16px 18px;
+  border: 1px solid #dfd2c4;
+  border-radius: 11px;
+  background: #fffdf9;
+}
+
+.curated-import-box strong,
+.curated-import-box p {
+  display: block;
+}
+
+.curated-import-box p {
+  margin: 4px 0 0;
+  color: #74685e;
+  font-size: 0.82rem;
+}
+
+.curated-import-box > .form-message {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+}
+
 .book-import-search {
   display: grid;
   grid-template-columns: minmax(220px, 1.5fr) minmax(160px, 1fr) 110px auto;
@@ -3466,6 +3494,14 @@ img {
 }
 
 @media (max-width: 800px) {
+  .curated-import-box {
+    grid-template-columns: 1fr;
+  }
+
+  .curated-import-box .button {
+    width: 100%;
+  }
+
   .home-request-panel {
     grid-template-columns: 1fr;
     gap: 24px;

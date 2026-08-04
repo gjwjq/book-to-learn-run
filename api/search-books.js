@@ -187,6 +187,7 @@ module.exports = async function handler(request, response) {
 
   const query = cleanText(request.query?.query).slice(0, 100);
   const category = cleanText(request.query?.category).slice(0, 40);
+  const shouldEnrich = request.query?.enrich !== "0";
   const page = Math.min(Math.max(Number(request.query?.page) || 1, 1), 50);
   const size = Math.min(Math.max(Number(request.query?.size) || 20, 1), 50);
 
@@ -241,7 +242,9 @@ module.exports = async function handler(request, response) {
         };
       })
       .filter((book) => book.title && book.author);
-    const categorizedBooks = await enrichBooksWithAI(books, category);
+    const categorizedBooks = shouldEnrich
+      ? await enrichBooksWithAI(books, category)
+      : books.map((book) => ({ ...book, category: category || "기타" }));
 
     response.setHeader(
       "Cache-Control",

@@ -288,6 +288,57 @@ let adminBookImportResults = [];
 let userBookSearchResults = [];
 let myBookRequestsCache = [];
 const PRIMARY_ADMIN_EMAIL = "umjunsick6015@gmail.com";
+const CURATED_CATEGORY_BOOKS = {
+  "자기계발": [
+    "행동하지 않으면 인생은 바뀌지 않는다",
+    "아주 작은 습관의 힘",
+    "원씽",
+    "역행자",
+    "데일 카네기 인간관계론",
+  ],
+  "진로/취업": [
+    "자소서 바이블 2.0",
+    "면접 바이블",
+    "일의 감각",
+    "내 일로 건너가는 법",
+    "커리어 스킬",
+  ],
+  "소설": [
+    "불편한 편의점",
+    "아몬드",
+    "달러구트 꿈 백화점",
+    "모순",
+    "채식주의자",
+  ],
+  "인문": [
+    "마흔에 읽는 쇼펜하우어",
+    "도둑맞은 집중력",
+    "사피엔스",
+    "정의란 무엇인가",
+    "총 균 쇠",
+  ],
+  "경제": [
+    "트렌드 코리아 2026",
+    "돈의 심리학",
+    "부자 아빠 가난한 아빠",
+    "EBS 다큐프라임 자본주의",
+    "현명한 투자자",
+  ],
+  "IT": [
+    "혼자 공부하는 파이썬",
+    "모던 자바스크립트 Deep Dive",
+    "클린 코드",
+    "리팩터링 2판",
+    "그림으로 이해하는 AWS 구조와 기술",
+  ],
+  "에세이": [
+    "나는 메트로폴리탄 미술관의 경비원입니다",
+    "여행의 이유",
+    "나는 나로 살기로 했다",
+    "하마터면 열심히 살 뻔했다",
+    "죽고 싶지만 떡볶이는 먹고 싶어",
+  ],
+};
 const ADMIN_BOOK_DRAFT_PREFIX = "btlr_admin_book_draft";
 const ADMIN_BOOK_DRAFT_DB = "btlr-admin-drafts";
 
@@ -1535,6 +1586,7 @@ async function initAdminPage() {
   document.getElementById("book-import-search-form")?.addEventListener("submit", searchBooksForImport);
   document.getElementById("book-import-select-all")?.addEventListener("change", toggleAllImportBooks);
   document.getElementById("book-import-submit")?.addEventListener("click", importSelectedBooks);
+  document.getElementById("curated-book-import")?.addEventListener("click", importCuratedCategoryBooks);
   document.querySelectorAll("#admin-book-form, #admin-book-edit-form").forEach(bindBookFormEnhancements);
   await restoreAdminBookDraft();
 }
@@ -1676,7 +1728,7 @@ function setBookImportMessage(message, success = false) {
   target.classList.toggle("success", success);
 }
 
-async function fetchExternalBooks(query, category, size) {
+async function fetchExternalBooks(query, category, size, options = {}) {
   const { data: sessionData } = await window.btlrSupabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) throw new Error("로그인이 필요합니다.");
@@ -1685,6 +1737,7 @@ async function fetchExternalBooks(query, category, size) {
     query,
     category,
     size: String(size),
+    enrich: options.enrich === false ? "0" : "1",
   });
   const response = await fetch(`/api/search-books?${params}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -1692,6 +1745,117 @@ async function fetchExternalBooks(query, category, size) {
   const result = await response.json();
   if (!response.ok) throw new Error(result.message || "도서 검색에 실패했습니다.");
   return result;
+}
+
+function normalizeCuratedTitle(value) {
+  return String(value || "")
+    .toLocaleLowerCase("ko-KR")
+    .replace(/\([^)]*\)|\[[^\]]*\]/g, "")
+    .replace(/[^\p{L}\p{N}]/gu, "");
+}
+
+function findCuratedBook(results, requestedTitle) {
+  const target = normalizeCuratedTitle(requestedTitle);
+  return results.find((book) => normalizeCuratedTitle(book.title) === target)
+    || results.find((book) => normalizeCuratedTitle(book.title).startsWith(target))
+    || results.find((book) => target.startsWith(normalizeCuratedTitle(book.title)))
+    || null;
+}
+
+function setCuratedImportMessage(message, success = false) {
+  const target = document.getElementById("curated-book-import-message");
+  if (!target) return;
+  target.textContent = message || "";
+  target.classList.toggle("success", success);
+}
+
+async function importCuratedCategoryBooks() {
+  const button = document.getElementById("curated-book-import");
+  if (!button || !window.btlrSupabase) return;
+  if (!window.confirm("관심사 7개에 추천 도서를 최대 5권씩 추가할까요? 이미 등록된 책은 건너뜁니다.")) return;
+
+  button.disabled = true;
+  const originalText = button.textContent;
+  const existingTitles = new Set(getBooks().map((book) => normalizeCuratedTitle(book.title)));
+  const existingIds = new Set(getBooks().map((book) => book.id));
+  const collectedTitles = new Set();
+  const booksToInsert = [];
+  const missingTitles = [];
+  const entries = Object.entries(CURATED_CATEGORY_BOOKS);
+  const totalTargets = entries.reduce((sum, [, titles]) => sum + titles.length, 0);
+  let processed = 0;
+
+  try {
+    for (const [category, titles] of entries) {
+      for (const title of titles) {
+        processed += 1;
+        button.textContent = `${processed}/${totalTargets} 검색 중`;
+        setCuratedImportMessage(`${category} · '${title}'을(를) 카카오 도서 API에서 찾고 있습니다.`);
+
+        if (existingTitles.has(normalizeCuratedTitle(title))) continue;
+
+        try {
+          const result = await fetchExternalBooks(title, category, 10, { enrich: false });
+          const book = findCuratedBook(Array.isArray(result.books) ? result.books : [], title);
+          if (!book) {
+            missingTitles.push(title);
+            continue;
+          }
+
+          const normalizedTitle = normalizeCuratedTitle(book.title);
+          const importedId = createImportedBookId(book);
+          if (
+            existingTitles.has(normalizedTitle)
+            || collectedTitles.has(normalizedTitle)
+            || existingIds.has(importedId)
+          ) continue;
+
+          collectedTitles.add(normalizedTitle);
+          booksToInsert.push(serializeBookForDatabase({
+            id: importedId,
+            title: book.title,
+            author: book.author,
+            publisher: book.publisher || "",
+            publishedDate: book.publishedDate || null,
+            category,
+            keywords: [...new Set([category, ...(book.keywords || [])])].slice(0, 6),
+            description: book.description || "",
+            shortDescription: book.shortDescription || book.description || "",
+            thumbnail: book.thumbnail || "",
+            totalQuantity: 1,
+            returnDate: null,
+          }));
+        } catch {
+          missingTitles.push(title);
+        }
+      }
+    }
+
+    if (!booksToInsert.length) {
+      setCuratedImportMessage("추가할 새 추천 도서가 없습니다. 이미 등록됐거나 검색 결과를 찾지 못했습니다.");
+      return;
+    }
+
+    button.textContent = "Supabase 등록 중";
+    const { error } = await window.btlrSupabase
+      .from("books")
+      .upsert(booksToInsert, { onConflict: "id", ignoreDuplicates: true });
+    if (error) throw new Error(error.message);
+
+    await renderAdminBooks();
+    setCuratedImportMessage(
+      `${booksToInsert.length}권을 추가했습니다.${missingTitles.length ? ` 찾지 못한 도서 ${missingTitles.length}권은 건너뛰었습니다.` : ""}`,
+      true,
+    );
+    showToast(`추천 도서 ${booksToInsert.length}권을 추가했습니다.`);
+  } catch (error) {
+    const message = error?.message || "추천 도서를 추가하지 못했습니다.";
+    setCuratedImportMessage(message);
+    showToast(message);
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
 }
 
 async function searchBooksForImport(event) {

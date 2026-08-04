@@ -42,6 +42,11 @@
               <div class="book-import-heading">
                 <div><p class="eyebrow">BOOK API</p><h3 id="book-import-title">도서 API에서 가져오기</h3><p>검색한 도서를 선택해 한 번에 등록할 수 있습니다.</p></div>
               </div>
+              <div class="curated-import-box">
+                <div><strong>관심사별 기본 도서 채우기</strong><p>7개 카테고리에 잘 알려진 도서를 5권씩 카카오 도서 API에서 찾아 등록합니다.</p></div>
+                <button id="curated-book-import" class="button button-secondary" type="button">추천 도서 35권 추가</button>
+                <p id="curated-book-import-message" class="form-message" role="status" aria-live="polite"></p>
+              </div>
               <form id="book-import-search-form" class="book-import-search">
                 <div><label for="book-import-query">검색어</label><input id="book-import-query" name="query" type="search" placeholder="예: 자기계발, 자바스크립트, 소설" required /></div>
                 <div><label for="book-import-category">등록 카테고리 <small>(선택)</small></label><input id="book-import-category" name="category" type="text" placeholder="비우면 AI 자동 분류" /></div>

@@ -2299,7 +2299,6 @@ function resetAdminBookForm() {
   const form = document.getElementById("admin-book-form");
   form?.reset();
   if (form) {
-    form.elements.originalId.value = "";
     form.elements.thumbnail.value = "";
     form.elements.totalQuantity.value = "1";
     renderBookCoverPreview(form, "");
@@ -2593,7 +2592,11 @@ async function saveAdminBook(event) {
   const submitButton = form.querySelector('button[type="submit"]');
   const originalButtonText = submitButton?.textContent || "저장";
 
+  // 빠른 연속 클릭이나 중복 이벤트로 같은 저장 요청이 두 번 실행되는 것을 막습니다.
+  if (form.dataset.saving === "true") return;
+
   if (!form.reportValidity()) return;
+  form.dataset.saving = "true";
   if (submitButton) {
     submitButton.disabled = true;
     submitButton.textContent = isEdit ? "저장 중..." : "추가 중...";
@@ -2619,9 +2622,11 @@ async function saveAdminBook(event) {
       values = Object.fromEntries(new FormData(form).entries());
     }
 
-    const generatedId = String(values.id || "").trim() || `book-${Date.now()}`;
     const originalId = isEdit ? String(values.originalId || "").trim() : "";
     if (isEdit && !originalId) throw new Error("수정할 도서 ID를 찾을 수 없습니다.");
+    // 새 도서는 폼의 숨겨진 값이나 시간값을 재사용하지 않고 항상 고유 UUID를 사용합니다.
+    // 수정 도서는 기존 기본키를 그대로 조회 조건에만 사용합니다.
+    const generatedId = isEdit ? originalId : `book-${window.crypto.randomUUID()}`;
 
     const coverResult = await uploadBookCover(form, generatedId);
     if (coverResult.error) throw new Error(coverResult.error);
@@ -2661,7 +2666,7 @@ async function saveAdminBook(event) {
       result = await window.btlrSupabase.from("books").insert(payload).select("id").single();
     }
 
-    if (result.error) throw new Error(result.error.message);
+    if (result.error) throw result.error;
     if (isEdit && !result.data) throw new Error("수정할 도서를 찾지 못했거나 수정 권한이 없습니다.");
 
     const successMessage = isEdit ? "도서 정보를 수정했습니다." : "도서를 추가했습니다.";
@@ -2671,11 +2676,12 @@ async function saveAdminBook(event) {
     else resetAdminBookForm();
     await renderAdminBooks();
   } catch (error) {
-    const message = error?.message || "도서 정보를 저장하지 못했습니다.";
+    const message = error?.details
+      ? `${error.message} (${error.details})`
+      : (error?.message || "도서 정보를 저장하지 못했습니다.");
     showBookFormMessage(form, message);
-    // modal dialog는 브라우저 top layer에 있으므로 수정 오류는 dialog 내부에 표시합니다.
-    if (!isEdit) showToast(message);
   } finally {
+    delete form.dataset.saving;
     if (submitButton) {
       submitButton.disabled = false;
       submitButton.textContent = originalButtonText;

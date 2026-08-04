@@ -2425,6 +2425,9 @@ function clearAdminBookDraft() {
 function fillAdminBookForm(book, form) {
   if (!form) return;
   form.elements.originalId.value = book.id;
+  if (form.elements.originalTotalQuantity) {
+    form.elements.originalTotalQuantity.value = String(book.totalQuantity ?? 1);
+  }
   form.elements.id.value = book.id;
   form.elements.title.value = book.title;
   form.elements.author.value = book.author;
@@ -2642,7 +2645,12 @@ async function saveAdminBook(event) {
     if (isEdit) {
       // 기본키는 수정 대상 검색에만 사용하고 UPDATE 값에서는 제외합니다.
       // 기존 도서를 다시 INSERT하는 경로가 없어 books_pkey 중복 오류가 발생하지 않습니다.
-      const { id: _ignoredId, ...updatePayload } = payload;
+      const { id: _ignoredId, total_quantity: nextTotalQuantity, ...updatePayload } = payload;
+      const originalTotalQuantity = Number(values.originalTotalQuantity);
+      // 수량이 그대로인 일반 정보 수정은 재고 동기화 트리거를 호출하지 않습니다.
+      if (nextTotalQuantity !== originalTotalQuantity) {
+        updatePayload.total_quantity = nextTotalQuantity;
+      }
       result = await window.btlrSupabase
         .from("books")
         .update(updatePayload)

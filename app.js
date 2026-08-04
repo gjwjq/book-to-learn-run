@@ -2423,7 +2423,6 @@ function renderUserBookSearchResults() {
           ${book.category ? `<span>${escapeHTML(book.category)}</span>` : ""}
           <h3>${escapeHTML(book.title)}</h3>
           <p>${escapeHTML(book.author)}${book.publisher ? ` · ${escapeHTML(book.publisher)}` : ""}</p>
-          <small>${escapeHTML(book.description || book.shortDescription || "도서 소개가 없습니다.")}</small>
         </div>
         <button class="button ${disabled ? "button-secondary is-disabled" : "button-primary"}" type="button" data-request-book-index="${index}" ${disabled ? "disabled" : ""}>${buttonText}</button>
       </article>

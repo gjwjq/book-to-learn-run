@@ -2838,24 +2838,13 @@ img {
   font-size: 1.02rem;
 }
 
-.user-request-copy p,
-.user-request-copy small {
+.user-request-copy p {
   display: block;
   margin: 0;
   overflow: hidden;
   color: #746d65;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.user-request-copy small {
-  margin-top: 7px;
-  overflow: visible;
-  color: #675f58;
-  text-overflow: clip;
-  white-space: normal;
-  line-height: 1.55;
-  font-size: 0.78rem;
 }
 
 .user-request-card > .button {

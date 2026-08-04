@@ -27,6 +27,13 @@
       <section class="shell detail-shell" id="book-detail" aria-live="polite"></section>
       <section class="shell related-section" id="related-section" hidden><div class="section-heading"><div><p class="eyebrow">MORE TO EXPLORE</p><h2>비슷한 관심사의 책</h2></div></div><div class="book-grid featured-grid" id="related-books"></div></section>
     </main>
+    <dialog id="cover-lightbox" class="cover-lightbox" aria-labelledby="cover-lightbox-title">
+      <div class="cover-lightbox-panel">
+        <button class="cover-lightbox-close" type="button" data-cover-close aria-label="표지 확대 닫기">×</button>
+        <img id="cover-lightbox-image" src="" alt="" />
+        <p id="cover-lightbox-title"></p>
+      </div>
+    </dialog>
     <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Run&amp;Learn</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>

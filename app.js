@@ -1360,7 +1360,9 @@ function initDetailPage() {
   container.innerHTML = `
     <article class="detail-panel">
       <div class="detail-cover-area">
-        <img src="${escapeHTML(book.thumbnail)}" alt="${escapeHTML(book.title)} 표지" onerror="this.outerHTML='<span class=&quot;cover-fallback&quot; aria-label=&quot;표지 이미지 없음&quot;>B</span>'" />
+        <button class="detail-cover-button" type="button" data-cover-open aria-label="${escapeHTML(book.title)} 표지 크게 보기">
+          <img src="${escapeHTML(book.thumbnail)}" alt="${escapeHTML(book.title)} 표지" onerror="this.outerHTML='<span class=&quot;cover-fallback&quot; aria-label=&quot;표지 이미지 없음&quot;>B</span>'" />
+        </button>
       </div>
       <div class="detail-content">
         <div class="detail-topline">
@@ -1386,6 +1388,26 @@ function initDetailPage() {
       </div>
     </article>
   `;
+
+  const coverButton = container.querySelector("[data-cover-open]");
+  const coverLightbox = document.getElementById("cover-lightbox");
+  const coverLightboxImage = document.getElementById("cover-lightbox-image");
+  const coverLightboxTitle = document.getElementById("cover-lightbox-title");
+  const closeCoverLightbox = () => {
+    if (coverLightbox?.open) coverLightbox.close();
+  };
+
+  coverButton?.addEventListener("click", () => {
+    if (!coverLightbox || !coverLightboxImage) return;
+    coverLightboxImage.src = book.thumbnail;
+    coverLightboxImage.alt = `${book.title} 표지 확대 이미지`;
+    if (coverLightboxTitle) coverLightboxTitle.textContent = book.title;
+    coverLightbox.showModal();
+  });
+  coverLightbox?.querySelector("[data-cover-close]")?.addEventListener("click", closeCoverLightbox);
+  coverLightbox?.addEventListener("click", (event) => {
+    if (event.target === coverLightbox) closeCoverLightbox();
+  });
 
   const related = getBooks()
     .filter((item) => item.id !== book.id && item.category === book.category)
@@ -1589,6 +1611,7 @@ async function initAdminPage() {
   document.getElementById("cancel-book-edit")?.addEventListener("click", closeAdminBookDialog);
   document.getElementById("admin-user-list")?.addEventListener("click", handleAdminUserAction);
   document.getElementById("admin-book-list")?.addEventListener("click", handleAdminBookAction);
+  document.getElementById("admin-book-list")?.addEventListener("click", handleAdminBookCoverSelection);
   document.getElementById("admin-book-list")?.addEventListener("change", handleAdminBookSelection);
   document.getElementById("admin-book-select-page")?.addEventListener("change", toggleAdminBookPageSelection);
   document.getElementById("admin-book-clear-selection")?.addEventListener("click", clearAdminBookSelection);
@@ -2333,9 +2356,11 @@ function renderAdminBookPage() {
   const startIndex = (adminBookPage - 1) * ADMIN_PAGE_SIZE;
   const visibleBooks = books.slice(startIndex, startIndex + ADMIN_PAGE_SIZE);
   target.innerHTML = visibleBooks.map((book) => `
-    <article class="admin-book-row">
+    <article class="admin-book-row${adminSelectedBookIds.has(book.id) ? " is-selected" : ""}">
       <label class="admin-book-check" aria-label="${escapeHTML(book.title)} 선택"><input type="checkbox" data-admin-book-select value="${escapeHTML(book.id)}" ${adminSelectedBookIds.has(book.id) ? "checked" : ""} /></label>
-      <img src="${escapeHTML(book.thumbnail)}" alt="" onerror="this.hidden=true" />
+      <button class="admin-book-cover-select" type="button" data-admin-book-cover-select aria-label="${escapeHTML(book.title)} 선택 또는 해제">
+        <img src="${escapeHTML(book.thumbnail)}" alt="" onerror="this.hidden=true" />
+      </button>
       <div class="admin-book-copy"><strong>${escapeHTML(book.title)}</strong><span>${escapeHTML(book.author)} · ${escapeHTML(book.publisher)}</span><small>${escapeHTML(book.id)} · ${escapeHTML(book.category)} · 재고 ${book.availableQuantity ?? 1}/${book.totalQuantity ?? 1}권</small></div>
       <div class="admin-row-actions"><button type="button" data-admin-book-action="edit" data-book-id="${escapeHTML(book.id)}">수정</button><button type="button" data-admin-book-action="delete" data-book-id="${escapeHTML(book.id)}">삭제</button></div>
     </article>
@@ -2373,7 +2398,17 @@ function handleAdminBookSelection(event) {
   if (!checkbox) return;
   if (checkbox.checked) adminSelectedBookIds.add(checkbox.value);
   else adminSelectedBookIds.delete(checkbox.value);
+  checkbox.closest(".admin-book-row")?.classList.toggle("is-selected", checkbox.checked);
   updateAdminBookBulkToolbar();
+}
+
+function handleAdminBookCoverSelection(event) {
+  const coverButton = event.target.closest("[data-admin-book-cover-select]");
+  if (!coverButton) return;
+  const checkbox = coverButton.closest(".admin-book-row")?.querySelector("[data-admin-book-select]");
+  if (!checkbox) return;
+  checkbox.checked = !checkbox.checked;
+  checkbox.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
 function toggleAdminBookPageSelection(event) {

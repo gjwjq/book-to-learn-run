@@ -24,13 +24,14 @@
     </header>
 
     <main id="main-content" class="page-main reading-room-main">
-      <section class="page-hero small"><div class="shell"><p class="eyebrow">READING ROOM</p><h1>열람실 예약</h1><p>날짜와 시간을 고르고 편한 좌석을 예약하세요.</p></div></section>
+      <section class="page-hero small"><div class="shell"><p class="eyebrow">READING ROOM</p><h1>열람실 예약</h1><p>날짜와 시간, 인원을 고르고 편한 좌석을 예약하세요.</p></div></section>
       <section class="shell reading-room-content" id="reading-room-content" aria-live="polite">
         <section class="reading-room-booking">
           <div class="reading-room-heading"><div><p class="eyebrow">SEAT MAP</p><h2>좌석 선택</h2></div><div class="seat-legend"><span><i class="available"></i>선택 가능</span><span><i class="selected"></i>선택 좌석</span><span><i class="occupied"></i>예약 완료</span></div></div>
           <form id="reading-room-filter" class="reading-room-filter">
             <div><label for="reading-room-date">이용 날짜</label><input id="reading-room-date" name="date" type="date" required /></div>
             <div><label for="reading-room-time">이용 시간</label><select id="reading-room-time" name="timeSlot" required><option value="09:00-11:00">09:00 - 11:00</option><option value="11:00-13:00">11:00 - 13:00</option><option value="13:00-15:00">13:00 - 15:00</option><option value="15:00-17:00">15:00 - 17:00</option><option value="17:00-19:00">17:00 - 19:00</option></select></div>
+            <div><label for="reading-room-party-size">이용 인원</label><select id="reading-room-party-size" name="partySize" required><option value="1">1명</option><option value="2">2명</option><option value="3">3명</option><option value="4">4명</option></select></div>
           </form>
           <div class="reading-room-front" aria-hidden="true">출입구 · 안내 데스크</div>
           <div id="reading-room-seat-grid" class="reading-room-seat-grid" aria-label="열람실 좌석"></div>

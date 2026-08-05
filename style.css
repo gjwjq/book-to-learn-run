@@ -557,15 +557,74 @@ img {
 
 .recent-searches {
   margin-top: 18px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   color: var(--muted);
   font-size: 0.75rem;
 }
 
-.recent-searches a {
-  margin-left: 8px;
+.recent-searches[hidden] {
+  display: none;
+}
+
+.recent-searches-label {
+  margin-right: 3px;
+}
+
+.recent-searches-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.recent-search-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.recent-search-item a {
   color: var(--brown);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.recent-search-remove {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  position: absolute;
+  z-index: 1;
+  top: -9px;
+  right: -9px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--brown);
+  border: 0;
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0;
+  cursor: pointer;
+  transform: scale(0.8);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.recent-search-item:hover .recent-search-remove,
+.recent-search-item:focus-within .recent-search-remove {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (hover: none) {
+  .recent-search-remove {
+    opacity: 0.72;
+    transform: scale(0.9);
+  }
 }
 
 .hero-visual {
@@ -4121,7 +4180,7 @@ img {
 
 .reading-room-filter {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.15fr 1fr 0.55fr;
   gap: 12px;
   padding: 18px;
   border-radius: 13px;

@@ -356,20 +356,24 @@ img {
 }
 
 .nav-inner a::after {
-  height: 3px;
+  width: 28px;
+  height: 2px;
   position: absolute;
-  right: 50%;
-  bottom: 0;
+  bottom: 6px;
   left: 50%;
   content: "";
-  background: var(--cream);
-  transition: left 0.2s ease, right 0.2s ease;
+  opacity: 0;
+  background: var(--orange);
+  border-radius: 2px;
+  transform: translateX(-50%) scaleX(0);
+  transform-origin: center;
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
 .nav-inner a:hover::after,
 .nav-inner a.active::after {
-  right: 0;
-  left: 0;
+  opacity: 1;
+  transform: translateX(-50%) scaleX(1);
 }
 
 .nav-inner a.active {

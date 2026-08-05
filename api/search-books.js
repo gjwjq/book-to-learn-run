@@ -50,15 +50,18 @@ const BOOK_CATEGORIES = [
   "경제",
   "IT",
   "에세이",
+  "만화",
 ];
 
 const GENRE_KEYWORDS = [
   "추리", "미스터리", "스릴러", "판타지", "로맨스", "SF", "역사", "청춘",
   "철학", "심리", "사회", "과학", "교육", "건강", "투자", "마케팅", "프로그래밍",
+  "소년만화", "순정만화", "액션", "모험", "코미디", "웹툰",
 ];
 
 function getFallbackCategory(book) {
   const source = [book.title, book.author, book.publisher, book.description].join(" ");
+  if (/만화|코믹(?:스)?|manga|webtoon|웹툰|원피스|one\s*piece|죠죠|jojo|귀멸의\s*칼날|주술회전|슬램덩크|나루토|블리치|드래곤볼|진격의\s*거인|명탐정\s*코난|체인소\s*맨|스파이\s*패밀리|최애의\s*아이|오다\s*에이치로|아라키\s*히로히코/i.test(source)) return "만화";
   if (/소설|추리|미스터리|스릴러|판타지|로맨스|SF|문학/.test(source)) return "소설";
   if (/에세이|수필|일상|육아|여행기/.test(source)) return "에세이";
   if (/개발|프로그래밍|코딩|컴퓨터|인공지능|AI|데이터|소프트웨어/.test(source)) return "IT";
@@ -119,6 +122,7 @@ async function enrichBooksWithAI(books, requestedCategory = "") {
                   ? `사용자가 지정한 카테고리 '${requestedCategory}'를 모든 책에 그대로 적용하세요.`
                   : "제목만 보지 말고 저자, 출판사, 소개를 함께 판단하세요.",
                 "책 제목이나 검색어를 카테고리로 사용하지 마세요.",
+                "일본 만화, 한국 만화, 그래픽노블, 코믹스, 웹툰 단행본은 줄거리가 소설처럼 보여도 반드시 카테고리를 '만화'로 분류하세요. 원피스와 죠죠의 기묘한 모험도 '만화'입니다.",
                 "추리·미스터리·스릴러 작품은 카테고리를 '소설'로 분류하고, 세부 장르는 키워드에 넣으세요.",
                 "키워드는 제목을 그대로 복사하지 말고 장르와 핵심 주제를 3~6개 작성하세요.",
                 "description은 2~3개의 완결된 한국어 문장으로 350자 이내에서 작성하세요.",

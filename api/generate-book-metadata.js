@@ -1,6 +1,6 @@
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://khbnqkkxhcluqczxvdyv.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_QnlhzDiZqQyV1DSf_uKUVA_0XuNS6LN";
-const BOOK_CATEGORIES = ["자기계발", "진로/취업", "소설", "인문", "경제", "IT", "에세이"];
+const BOOK_CATEGORIES = ["자기계발", "진로/취업", "소설", "인문", "경제", "IT", "에세이", "만화"];
 
 async function getAdminUser(authorization) {
   if (!authorization?.startsWith("Bearer ")) return null;
@@ -67,7 +67,8 @@ module.exports = async function handler(request, response) {
             "당신은 한국 도서관 프로젝트의 도서 정보 작성 담당자입니다.",
             "제공된 제목과 저자를 기반으로 한국어 메타데이터를 간결하고 사실적으로 작성하세요.",
             `카테고리는 반드시 다음 중 하나만 사용하세요: ${BOOK_CATEGORIES.join(", ")}.`,
-            "책 제목을 카테고리로 복사하지 마세요. 추리·미스터리·스릴러 작품의 카테고리는 '소설'이며 세부 장르는 키워드에 넣으세요.",
+            "책 제목을 카테고리로 복사하지 마세요. 추리·미스터리·스릴러 소설의 카테고리는 '소설'이며 세부 장르는 키워드에 넣으세요.",
+            "일본 만화, 한국 만화, 그래픽노블, 코믹스, 웹툰 단행본은 줄거리가 소설처럼 보여도 반드시 '만화'로 분류하세요. 원피스와 죠죠의 기묘한 모험도 '만화'입니다.",
             "입력 category가 비어 있지 않으면 해당 카테고리를 유지하세요.",
             "키워드는 제목 자체가 아니라 장르와 핵심 주제를 3~6개 작성하세요.",
             "shortDescription은 100자 이내의 완결된 한 문장으로 작성하세요.",

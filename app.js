@@ -299,7 +299,7 @@ const MAX_PENDING_BOOK_REQUESTS = 10;
 const READING_ROOM_SEATS = 24;
 const READING_ROOM_TIME_SLOTS = ["09:00-11:00", "11:00-13:00", "13:00-15:00", "15:00-17:00", "17:00-19:00"];
 const PRIMARY_ADMIN_EMAIL = "umjunsick6015@gmail.com";
-const BOOK_CATEGORIES = ["자기계발", "진로/취업", "소설", "인문", "경제", "IT", "에세이"];
+const BOOK_CATEGORIES = ["자기계발", "진로/취업", "소설", "인문", "경제", "IT", "에세이", "만화"];
 const CURATED_CATEGORY_BOOKS = {
   "자기계발": [
     "행동하지 않으면 인생은 바뀌지 않는다",
@@ -349,6 +349,13 @@ const CURATED_CATEGORY_BOOKS = {
     "나는 나로 살기로 했다",
     "하마터면 열심히 살 뻔했다",
     "죽고 싶지만 떡볶이는 먹고 싶어",
+  ],
+  "만화": [
+    "원피스 1",
+    "죠죠의 기묘한 모험 1",
+    "슬램덩크 신장재편판 1",
+    "귀멸의 칼날 1",
+    "명탐정 코난 1",
   ],
 };
 const ADMIN_BOOK_DRAFT_PREFIX = "btlr_admin_book_draft";
@@ -1922,7 +1929,8 @@ function setCuratedImportMessage(message, success = false) {
 async function importCuratedCategoryBooks() {
   const button = document.getElementById("curated-book-import");
   if (!button || !window.btlrSupabase) return;
-  if (!window.confirm("관심사 7개에 추천 도서를 최대 5권씩 추가할까요? 이미 등록된 책은 건너뜁니다.")) return;
+  const categoryCount = Object.keys(CURATED_CATEGORY_BOOKS).length;
+  if (!window.confirm(`관심사 ${categoryCount}개에 추천 도서를 최대 5권씩 추가할까요? 이미 등록된 책은 건너뜁니다.`)) return;
 
   button.disabled = true;
   const originalText = button.textContent;
@@ -2021,6 +2029,16 @@ function isBookDescriptionIncomplete(book) {
   return !/[.!?。！？]["'”’」』)]?\s*$/.test(description);
 }
 
+function isLikelyComicBook(book) {
+  const source = [
+    book?.title,
+    book?.author,
+    book?.publisher,
+    ...(Array.isArray(book?.keywords) ? book.keywords : []),
+  ].join(" ");
+  return /만화|코믹(?:스)?|manga|webtoon|웹툰|원피스|one\s*piece|죠죠|jojo|귀멸의\s*칼날|주술회전|슬램덩크|나루토|블리치|드래곤볼|진격의\s*거인|명탐정\s*코난|체인소\s*맨|스파이\s*패밀리|최애의\s*아이|오다\s*에이치로|아라키\s*히로히코/i.test(source);
+}
+
 function waitForBookRepair(milliseconds) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
@@ -2043,7 +2061,9 @@ async function requestBookRepairMetadata(book, accessToken) {
         publishedDate: book.publishedDate || "",
         description: book.description || "",
         shortDescription: book.shortDescription || "",
-        category: BOOK_CATEGORIES.includes(String(book.category || "").trim()) ? book.category : "",
+        category: isLikelyComicBook(book) && book.category !== "만화"
+          ? ""
+          : BOOK_CATEGORIES.includes(String(book.category || "").trim()) ? book.category : "",
       }),
     });
     const metadata = await response.json().catch(() => ({}));
@@ -2066,6 +2086,7 @@ async function repairExistingBookCategories() {
 
   const booksToRepair = getBooks().filter((book) => (
     !BOOK_CATEGORIES.includes(String(book.category || "").trim())
+    || (book.category !== "만화" && isLikelyComicBook(book))
     || isBookDescriptionIncomplete(book)
   ));
   if (!booksToRepair.length) {

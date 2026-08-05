@@ -284,6 +284,8 @@ let toastTimer = null;
 let currentUserCache = null;
 let booksCache = mockBooks;
 let loansCache = [];
+let reservationsCache = [];
+let readingRoomReservationsCache = [];
 let adminBookImportResults = [];
 let userBookSearchResults = [];
 let myBookRequestsCache = [];
@@ -292,6 +294,10 @@ let adminUserPage = 1;
 let adminBookPage = 1;
 const adminSelectedBookIds = new Set();
 const ADMIN_PAGE_SIZE = 20;
+const MAX_ACTIVE_BOOK_RESERVATIONS = 10;
+const MAX_PENDING_BOOK_REQUESTS = 10;
+const READING_ROOM_SEATS = 24;
+const READING_ROOM_TIME_SLOTS = ["09:00-11:00", "11:00-13:00", "13:00-15:00", "15:00-17:00", "17:00-19:00"];
 const PRIMARY_ADMIN_EMAIL = "umjunsick6015@gmail.com";
 const BOOK_CATEGORIES = ["자기계발", "진로/취업", "소설", "인문", "경제", "IT", "에세이"];
 const CURATED_CATEGORY_BOOKS = {
@@ -350,7 +356,11 @@ const ADMIN_BOOK_DRAFT_DB = "btlr-admin-drafts";
 
 async function initApp() {
   await loadCurrentUser();
-  await Promise.all([loadBooksFromSupabase(), loadUserLoansFromSupabase()]);
+  await Promise.all([
+    loadBooksFromSupabase(),
+    loadUserLoansFromSupabase(),
+    loadUserReservationsFromSupabase(),
+  ]);
   handleHeaderSearch();
   renderAuthArea();
   handleGlobalActions();
@@ -366,6 +376,7 @@ async function initApp() {
     mypage: initMyPage,
     admin: initAdminPage,
     request: initBookRequestPage,
+    "reading-room": initReadingRoomPage,
   };
 
   if (pageInitializers[page]) {
@@ -447,7 +458,7 @@ function getCurrentRelativeUrl() {
 function getSafeNextUrl() {
   const next = getQueryParam("next");
   if (!next) return "mypage.html";
-  return /^(index|search|detail|reserve|mypage|admin)\.html(?:[?#].*)?$/.test(next)
+  return /^(index|search|detail|reserve|mypage|admin|request|reading-room)\.html(?:[?#].*)?$/.test(next)
     ? next
     : "mypage.html";
 }
@@ -923,14 +934,38 @@ function isLoaned(bookId) {
 }
 
 function getReservations() {
-  return getStoredArray(STORAGE_KEYS.reservations);
+  return [...reservationsCache];
 }
 
-function saveReservations(reservations) {
-  setStoredArray(STORAGE_KEYS.reservations, reservations);
+async function loadUserReservationsFromSupabase() {
+  const user = getCurrentUser();
+  if (!user || !window.btlrSupabase) {
+    reservationsCache = [];
+    return;
+  }
+
+  const { data, error } = await window.btlrSupabase
+    .from("book_reservations")
+    .select("id, user_id, book_id, status, created_at")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    reservationsCache = [];
+    return;
+  }
+
+  reservationsCache = (data || []).map((reservation) => ({
+    id: reservation.id,
+    userId: reservation.user_id,
+    bookId: reservation.book_id,
+    reservationStatus: "예약 완료",
+    createdAt: reservation.created_at,
+  }));
 }
 
-function reserveBook(bookId) {
+async function reserveBook(bookId) {
   const user = requireLogin();
   if (!user) return { success: false, redirected: true };
   if (user.role === "admin") {
@@ -947,16 +982,15 @@ function reserveBook(bookId) {
   if (isReserved(bookId)) {
     return { success: false, message: "이미 예약 신청한 도서입니다." };
   }
+  if (getReservations().filter((reservation) => reservation.userId === user.id).length >= MAX_ACTIVE_BOOK_RESERVATIONS) {
+    return { success: false, message: `도서 예약은 최대 ${MAX_ACTIVE_BOOK_RESERVATIONS}권까지 가능합니다.` };
+  }
 
-  const reservations = getReservations();
-  reservations.push({
-    id: generateId("res"),
-    userId: user.id,
-    bookId,
-    reservationStatus: "예약 완료",
-    createdAt: new Date().toISOString(),
+  const { error } = await window.btlrSupabase.rpc("reserve_book", {
+    target_book_id: bookId,
   });
-  saveReservations(reservations);
+  if (error) return { success: false, message: error.message };
+  await loadUserReservationsFromSupabase();
   return {
     success: true,
     message:
@@ -964,26 +998,21 @@ function reserveBook(bookId) {
   };
 }
 
-function cancelReservation(reservationId) {
+async function cancelReservation(reservationId) {
   const user = getCurrentUser();
   if (!user) return { success: false, message: "로그인이 필요합니다." };
-  const reservations = getReservations();
-  const exists = reservations.some(
+  const exists = getReservations().some(
     (reservation) =>
       reservation.id === reservationId && reservation.userId === user.id,
   );
   if (!exists) {
     return { success: false, message: "예약 정보를 찾을 수 없습니다." };
   }
-  saveReservations(
-    reservations.filter(
-      (reservation) =>
-        !(
-          reservation.id === reservationId &&
-          reservation.userId === user.id
-        ),
-    ),
-  );
+  const { error } = await window.btlrSupabase.rpc("cancel_book_reservation", {
+    target_reservation_id: reservationId,
+  });
+  if (error) return { success: false, message: error.message };
+  await loadUserReservationsFromSupabase();
   return { success: true, message: "예약을 취소했습니다." };
 }
 
@@ -1018,6 +1047,17 @@ function renderAuthArea() {
   });
 
   document.querySelectorAll(".main-nav .nav-inner").forEach((navigation) => {
+    let readingRoomLink = navigation.querySelector(".reading-room-nav-link");
+    if (!readingRoomLink) {
+      readingRoomLink = document.createElement("a");
+      readingRoomLink.className = "reading-room-nav-link";
+      readingRoomLink.href = "reading-room.html";
+      readingRoomLink.textContent = "열람실 예약";
+      const myPageLink = navigation.querySelector('a[href="mypage.html"]');
+      navigation.insertBefore(readingRoomLink, myPageLink || navigation.querySelector(".nav-message"));
+    }
+    readingRoomLink.classList.toggle("active", getCurrentPage() === "reading-room");
+
     const existingLink = navigation.querySelector(".request-nav-link");
     if (user?.role === "member" && !existingLink) {
       const link = document.createElement("a");
@@ -1100,7 +1140,7 @@ function handleGlobalActions() {
     }
 
     if (action === "cancel-reservation") {
-      result = cancelReservation(trigger.dataset.recordId);
+      result = await cancelReservation(trigger.dataset.recordId);
     }
 
     if (!result || result.redirected) return;
@@ -1392,7 +1432,6 @@ function initDetailPage() {
   const coverButton = container.querySelector("[data-cover-open]");
   const coverLightbox = document.getElementById("cover-lightbox");
   const coverLightboxImage = document.getElementById("cover-lightbox-image");
-  const coverLightboxTitle = document.getElementById("cover-lightbox-title");
   const closeCoverLightbox = () => {
     if (coverLightbox?.open) coverLightbox.close();
   };
@@ -1401,7 +1440,6 @@ function initDetailPage() {
     if (!coverLightbox || !coverLightboxImage) return;
     coverLightboxImage.src = book.thumbnail;
     coverLightboxImage.alt = `${book.title} 표지 확대 이미지`;
-    if (coverLightboxTitle) coverLightboxTitle.textContent = book.title;
     coverLightbox.showModal();
   });
   coverLightbox?.querySelector("[data-cover-close]")?.addEventListener("click", closeCoverLightbox);
@@ -1443,6 +1481,9 @@ function initReservePage() {
   const alreadyReserved = isReserved(book.id);
   const loanedByUser = isLoaned(book.id);
   const isAdmin = getCurrentUser()?.role === "admin";
+  const reservationLimitReached = getReservations().filter(
+    (reservation) => reservation.userId === user.id,
+  ).length >= MAX_ACTIVE_BOOK_RESERVATIONS;
   const canReserve = !isAdmin && !loanedByUser && book.loanStatus !== "대출 가능";
 
   container.innerHTML = `
@@ -1465,6 +1506,7 @@ function initReservePage() {
         <h2>예약 전 확인해 주세요</h2>
         <ul>
           <li>같은 도서는 한 번만 예약할 수 있습니다.</li>
+          <li>한 회원은 예약 중인 도서를 최대 ${MAX_ACTIVE_BOOK_RESERVATIONS}권까지 유지할 수 있습니다.</li>
           <li>대출 가능한 도서는 예약할 수 없습니다.</li>
           <li>예약 도서는 반납 순서와 예약 순번에 따라 이용할 수 있습니다.</li>
           <li>예약 현황과 취소는 마이페이지에서 관리할 수 있습니다.</li>
@@ -1474,6 +1516,8 @@ function initReservePage() {
             ? '<div class="available-guide">관리자 계정은 도서를 대출하거나 예약할 수 없습니다.</div>'
             : loanedByUser
             ? '<div class="available-guide">현재 본인이 대출 중인 도서입니다. 반납 후 다시 이용할 수 있습니다.</div><a class="button button-secondary button-full" href="mypage.html#loans-section" style="margin-top:8px">마이페이지에서 확인</a>'
+            : reservationLimitReached && !alreadyReserved && book.loanStatus !== "대출 가능"
+            ? `<div class="available-guide">도서 예약은 최대 ${MAX_ACTIVE_BOOK_RESERVATIONS}권까지 가능합니다. 기존 예약을 취소한 뒤 다시 신청해 주세요.</div><a class="button button-secondary button-full" href="mypage.html#reservations-section" style="margin-top:8px">예약 내역 확인</a>`
             : canReserve
             ? `
               <p class="reserve-message" id="reserve-message">${alreadyReserved ? "이미 예약 신청한 도서입니다." : ""}</p>
@@ -1489,11 +1533,16 @@ function initReservePage() {
     </div>
   `;
 
-  document.getElementById("reserve-submit")?.addEventListener("click", () => {
-    const result = reserveBook(book.id);
+  document.getElementById("reserve-submit")?.addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    button.textContent = "예약 처리 중...";
+    const result = await reserveBook(book.id);
     if (!result.success) {
       const message = document.getElementById("reserve-message");
       if (message) message.textContent = result.message;
+      button.disabled = false;
+      button.textContent = "예약 신청하기";
       return;
     }
     container.innerHTML = `
@@ -2876,6 +2925,166 @@ async function handleAdminBookAction(event) {
   }
 }
 
+function getLocalDateInputValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+async function initReadingRoomPage() {
+  const user = requireLogin();
+  if (!user) return;
+
+  const content = document.getElementById("reading-room-content");
+  if (!content) return;
+  if (user.role === "admin") {
+    content.innerHTML = `
+      <div class="request-empty reading-room-gate">
+        <span>!</span>
+        <strong>관리자 계정은 열람실을 예약할 수 없습니다.</strong>
+        <p>일반 회원 계정으로 로그인해 이용해 주세요.</p>
+        <a class="button button-primary" href="index.html">홈으로 돌아가기</a>
+      </div>
+    `;
+    return;
+  }
+
+  const dateInput = document.getElementById("reading-room-date");
+  const timeInput = document.getElementById("reading-room-time");
+  const seatGrid = document.getElementById("reading-room-seat-grid");
+  const submitButton = document.getElementById("reading-room-submit");
+  const message = document.getElementById("reading-room-message");
+  let selectedSeat = null;
+  let availability = [];
+
+  const today = new Date();
+  const lastDate = new Date(today);
+  lastDate.setDate(lastDate.getDate() + 14);
+  dateInput.min = getLocalDateInputValue(today);
+  dateInput.max = getLocalDateInputValue(lastDate);
+  dateInput.value = getLocalDateInputValue(today);
+
+  const setMessage = (text, success = false) => {
+    message.textContent = text || "";
+    message.classList.toggle("success", success);
+  };
+
+  const updateSubmitButton = () => {
+    submitButton.disabled = !selectedSeat;
+    submitButton.textContent = selectedSeat ? `${selectedSeat}번 좌석 예약하기` : "좌석을 선택해 주세요";
+  };
+
+  const renderSeats = () => {
+    seatGrid.innerHTML = availability.map((seat) => {
+      const seatNumber = Number(seat.seat_number);
+      const occupied = Boolean(seat.is_reserved);
+      const selected = selectedSeat === seatNumber;
+      return `<button class="reading-room-seat${occupied ? " is-occupied" : ""}${selected ? " is-selected" : ""}" type="button" data-room-seat="${seatNumber}" ${occupied ? "disabled" : ""} aria-pressed="${selected}"><span>${seatNumber}</span><small>${occupied ? "예약 완료" : selected ? "선택됨" : "선택 가능"}</small></button>`;
+    }).join("");
+  };
+
+  const loadAvailability = async () => {
+    selectedSeat = null;
+    updateSubmitButton();
+    setMessage("좌석 현황을 불러오는 중입니다...");
+    const { data, error } = await window.btlrSupabase.rpc("get_reading_room_availability", {
+      target_date: dateInput.value,
+      target_time_slot: timeInput.value,
+    });
+    if (error) {
+      availability = [];
+      seatGrid.innerHTML = '<div class="request-empty compact reading-room-seat-error"><strong>좌석 현황을 불러오지 못했습니다.</strong><p>데이터베이스 설정을 확인한 뒤 다시 시도해 주세요.</p></div>';
+      setMessage(error.message);
+      return;
+    }
+    availability = data || [];
+    renderSeats();
+    const availableCount = availability.filter((seat) => !seat.is_reserved).length;
+    setMessage(`${READING_ROOM_SEATS}석 중 ${availableCount}석을 예약할 수 있습니다.`, true);
+  };
+
+  const loadMyReadingRoomReservations = async () => {
+    const target = document.getElementById("reading-room-reservation-list");
+    target.innerHTML = '<p class="request-loading">예약 내역을 불러오는 중...</p>';
+    const { data, error } = await window.btlrSupabase
+      .from("reading_room_reservations")
+      .select("id, seat_number, reservation_date, time_slot, created_at")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .gte("reservation_date", getLocalDateInputValue())
+      .order("reservation_date", { ascending: true })
+      .order("time_slot", { ascending: true });
+
+    if (error) {
+      readingRoomReservationsCache = [];
+      target.innerHTML = `<p class="request-loading">${escapeHTML(error.message)}</p>`;
+      return;
+    }
+
+    readingRoomReservationsCache = data || [];
+    if (!readingRoomReservationsCache.length) {
+      target.innerHTML = '<div class="request-empty compact"><span>⌑</span><strong>예정된 열람실 예약이 없습니다.</strong><p>원하는 날짜와 좌석을 선택해 보세요.</p></div>';
+      return;
+    }
+
+    target.innerHTML = readingRoomReservationsCache.map((reservation) => `
+      <article class="room-reservation-card">
+        <div class="room-seat-number"><span>${reservation.seat_number}</span><small>좌석</small></div>
+        <div><strong>${formatDate(reservation.reservation_date)}</strong><p>${escapeHTML(reservation.time_slot.replace("-", " - "))}</p></div>
+        <button class="button button-secondary" type="button" data-cancel-room-reservation="${reservation.id}">예약 취소</button>
+      </article>
+    `).join("");
+  };
+
+  seatGrid.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-room-seat]");
+    if (!button || button.disabled) return;
+    selectedSeat = Number(button.dataset.roomSeat);
+    renderSeats();
+    updateSubmitButton();
+    setMessage(`${selectedSeat}번 좌석을 선택했습니다.`, true);
+  });
+
+  document.getElementById("reading-room-filter")?.addEventListener("change", loadAvailability);
+  document.getElementById("refresh-reading-room")?.addEventListener("click", async () => {
+    await Promise.all([loadAvailability(), loadMyReadingRoomReservations()]);
+  });
+
+  submitButton.addEventListener("click", async () => {
+    if (!selectedSeat) return;
+    submitButton.disabled = true;
+    submitButton.textContent = "예약 처리 중...";
+    const { error } = await window.btlrSupabase.rpc("reserve_reading_room_seat", {
+      target_date: dateInput.value,
+      target_time_slot: timeInput.value,
+      target_seat_number: selectedSeat,
+    });
+    if (error) {
+      setMessage(error.message);
+      await loadAvailability();
+      return;
+    }
+    showToast(`${selectedSeat}번 좌석을 예약했습니다.`);
+    await Promise.all([loadAvailability(), loadMyReadingRoomReservations()]);
+  });
+
+  document.getElementById("reading-room-reservation-list")?.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-cancel-room-reservation]");
+    if (!button) return;
+    if (!window.confirm("이 열람실 예약을 취소할까요?")) return;
+    button.disabled = true;
+    const { error } = await window.btlrSupabase.rpc("cancel_reading_room_reservation", {
+      target_reservation_id: button.dataset.cancelRoomReservation,
+    });
+    showToast(error ? error.message : "열람실 예약을 취소했습니다.");
+    if (!error) await Promise.all([loadAvailability(), loadMyReadingRoomReservations()]);
+    else button.disabled = false;
+  });
+
+  await Promise.all([loadAvailability(), loadMyReadingRoomReservations()]);
+}
+
 async function initBookRequestPage() {
   const user = requireLogin();
   if (!user) return;
@@ -2956,16 +3165,21 @@ function renderUserBookSearchResults() {
       .filter((request) => request.status === "pending")
       .map((request) => String(request.external_id || "").toLocaleLowerCase()),
   );
+  const requestLimitReached = myBookRequestsCache.filter(
+    (request) => request.status === "pending",
+  ).length >= MAX_PENDING_BOOK_REQUESTS;
 
   target.innerHTML = userBookSearchResults.map((book, index) => {
     const alreadyExists = existingEditions.has(getBookEditionIdentity(book));
     const alreadyRequested = pendingExternalIds.has(String(book.externalId || "").toLocaleLowerCase());
-    const disabled = alreadyExists || alreadyRequested;
+    const disabled = alreadyExists || alreadyRequested || requestLimitReached;
     const buttonText = alreadyExists
       ? "이미 보유 중"
       : alreadyRequested
         ? "요청 완료"
-        : "추가 요청";
+        : requestLimitReached
+          ? "요청 한도 도달"
+          : "추가 요청";
 
     return `
       <article class="user-request-card ${disabled ? "is-disabled" : ""}">
@@ -2990,6 +3204,14 @@ async function submitUserBookRequest(event) {
   if (!button) return;
   const book = userBookSearchResults[Number(button.dataset.requestBookIndex)];
   if (!book) return;
+
+  const pendingRequestCount = myBookRequestsCache.filter(
+    (request) => request.status === "pending",
+  ).length;
+  if (pendingRequestCount >= MAX_PENDING_BOOK_REQUESTS) {
+    setUserBookSearchMessage(`승인 대기 중인 도서 요청은 최대 ${MAX_PENDING_BOOK_REQUESTS}권까지 가능합니다.`);
+    return;
+  }
 
   button.disabled = true;
   button.textContent = "요청 중...";

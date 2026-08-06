@@ -296,8 +296,8 @@ const adminSelectedBookIds = new Set();
 const ADMIN_PAGE_SIZE = 20;
 const MAX_ACTIVE_BOOK_RESERVATIONS = 10;
 const MAX_PENDING_BOOK_REQUESTS = 10;
-const READING_ROOM_SEATS = 24;
-const READING_ROOM_TIME_SLOTS = ["09:00-11:00", "11:00-13:00", "13:00-15:00", "15:00-17:00", "17:00-19:00"];
+const READING_ROOM_SEATS = 60;
+const READING_ROOM_MAX_SELECTED_SEATS = 4;
 const PRIMARY_ADMIN_EMAIL = "umjunsick6015@gmail.com";
 const BOOK_CATEGORIES = ["자기계발", "진로/취업", "소설", "인문", "경제", "IT", "에세이", "만화"];
 const CURATED_CATEGORY_BOOKS = {
@@ -3008,13 +3008,17 @@ async function initReadingRoomPage() {
   }
 
   const dateInput = document.getElementById("reading-room-date");
-  const timeInput = document.getElementById("reading-room-time");
-  const partySizeInput = document.getElementById("reading-room-party-size");
+  const startTimeInput = document.getElementById("reading-room-start-time");
+  const endTimeInput = document.getElementById("reading-room-end-time");
   const seatGrid = document.getElementById("reading-room-seat-grid");
   const submitButton = document.getElementById("reading-room-submit");
   const message = document.getElementById("reading-room-message");
   let selectedSeats = new Set();
   let availability = [];
+  let reservationStateLoaded = false;
+  let hasUpcomingReservation = false;
+  let reservationStateError = "";
+  let availabilityRequestId = 0;
 
   const today = new Date();
   const firstDate = new Date(today);
@@ -3025,38 +3029,160 @@ async function initReadingRoomPage() {
   dateInput.max = getLocalDateInputValue(lastDate);
   dateInput.value = getLocalDateInputValue(firstDate);
 
+  const parseTimeMinutes = (value) => {
+    const match = /^(\d{2}):(\d{2})$/.exec(String(value || ""));
+    if (!match) return null;
+    return Number(match[1]) * 60 + Number(match[2]);
+  };
+
+  const formatTimeMinutes = (minutes) => {
+    const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
+    const remainder = String(minutes % 60).padStart(2, "0");
+    return `${hours}:${remainder}`;
+  };
+
+  const formatDuration = (durationMinutes) => {
+    const hours = Math.floor(durationMinutes / 60);
+    const minutes = durationMinutes % 60;
+    return minutes ? `${hours}시간 ${minutes}분` : `${hours}시간`;
+  };
+
+  const validateTimeRange = () => {
+    const startMinutes = parseTimeMinutes(startTimeInput.value);
+    const endMinutes = parseTimeMinutes(endTimeInput.value);
+    if (startMinutes === null || endMinutes === null) {
+      return { valid: false, message: "시작 시간과 종료 시간을 선택해 주세요." };
+    }
+    if (startMinutes < 6 * 60 || endMinutes > 22 * 60) {
+      return { valid: false, message: "열람실 운영시간은 06:00부터 22:00까지입니다." };
+    }
+    const durationMinutes = endMinutes - startMinutes;
+    if (durationMinutes < 2 * 60) {
+      return { valid: false, message: "이용 시간은 최소 2시간 이상이어야 합니다." };
+    }
+    if (durationMinutes > 6 * 60) {
+      return { valid: false, message: "이용 시간은 최대 6시간까지 선택할 수 있습니다." };
+    }
+    return { valid: true, startMinutes, endMinutes, durationMinutes };
+  };
+
+  const syncEndTimeRange = () => {
+    const startMinutes = parseTimeMinutes(startTimeInput.value);
+    if (startMinutes === null) return;
+    const minimumEnd = Math.min(startMinutes + 2 * 60, 22 * 60);
+    const maximumEnd = Math.min(startMinutes + 6 * 60, 22 * 60);
+    endTimeInput.min = formatTimeMinutes(minimumEnd);
+    endTimeInput.max = formatTimeMinutes(maximumEnd);
+    const currentEnd = parseTimeMinutes(endTimeInput.value);
+    if (currentEnd === null || currentEnd < minimumEnd || currentEnd > maximumEnd) {
+      endTimeInput.value = formatTimeMinutes(Math.min(startMinutes + 3 * 60, maximumEnd));
+    }
+  };
+
   const setMessage = (text, success = false) => {
     message.textContent = text || "";
     message.classList.toggle("success", success);
   };
 
   const updateSubmitButton = () => {
-    const partySize = Number(partySizeInput.value);
     const selectedSeatNumbers = [...selectedSeats].sort((a, b) => a - b);
-    const selectionComplete = selectedSeatNumbers.length === partySize;
-    submitButton.disabled = !selectionComplete;
-    submitButton.textContent = selectionComplete
-      ? `${selectedSeatNumbers.join(", ")}번 좌석 · ${partySize}명 예약하기`
-      : `좌석을 ${partySize - selectedSeatNumbers.length}개 더 선택해 주세요`;
+    const timeRange = validateTimeRange();
+    if (!reservationStateLoaded) {
+      submitButton.disabled = true;
+      submitButton.textContent = "예약 상태 확인 중...";
+      return;
+    }
+    if (hasUpcomingReservation) {
+      submitButton.disabled = true;
+      submitButton.textContent = "기존 예약을 먼저 취소해 주세요";
+      return;
+    }
+    if (!timeRange.valid) {
+      submitButton.disabled = true;
+      submitButton.textContent = "이용 시간을 확인해 주세요";
+      return;
+    }
+    submitButton.disabled = selectedSeatNumbers.length === 0;
+    submitButton.textContent = selectedSeatNumbers.length
+      ? `${selectedSeatNumbers.length}석 · ${formatDuration(timeRange.durationMinutes)} 예약하기`
+      : `좌석을 최대 ${READING_ROOM_MAX_SELECTED_SEATS}개까지 선택해 주세요`;
+  };
+
+  const renderSeatButton = (seat, position) => {
+    const seatNumber = Number(seat.seat_number);
+    const occupied = Boolean(seat.is_reserved);
+    const selected = selectedSeats.has(seatNumber);
+    const locked = !reservationStateLoaded || hasUpcomingReservation;
+    const disabled = occupied || locked;
+    const stateLabel = occupied ? "예약 완료" : selected ? "선택됨" : locked ? "선택 불가" : "선택 가능";
+    return `
+      <button
+        class="reading-room-seat is-${position}${occupied ? " is-occupied" : ""}${selected ? " is-selected" : ""}${locked && !occupied ? " is-locked" : ""}"
+        type="button"
+        data-room-seat="${seatNumber}"
+        ${disabled ? "disabled" : ""}
+        aria-pressed="${selected}"
+        aria-label="${seatNumber}번 좌석, ${stateLabel}"
+      ><span>${seatNumber}</span><small>${stateLabel}</small></button>
+    `;
   };
 
   const renderSeats = () => {
-    seatGrid.innerHTML = availability.map((seat) => {
-      const seatNumber = Number(seat.seat_number);
-      const occupied = Boolean(seat.is_reserved);
-      const selected = selectedSeats.has(seatNumber);
-      return `<button class="reading-room-seat${occupied ? " is-occupied" : ""}${selected ? " is-selected" : ""}" type="button" data-room-seat="${seatNumber}" ${occupied ? "disabled" : ""} aria-pressed="${selected}"><span>${seatNumber}</span><small>${occupied ? "예약 완료" : selected ? "선택됨" : "선택 가능"}</small></button>`;
-    }).join("");
+    if (!availability.length) return;
+    const seatsByNumber = new Map(availability.map((seat) => [Number(seat.seat_number), seat]));
+    const renderZone = (zoneIndex) => {
+      const firstTableIndex = zoneIndex * 5;
+      const zoneName = zoneIndex === 0 ? "A" : "B";
+      const tables = Array.from({ length: 5 }, (_, offset) => {
+        const tableIndex = firstTableIndex + offset;
+        const firstSeatNumber = tableIndex * 6 + 1;
+        const topSeats = [0, 1, 2].map((seatOffset) => {
+          const seatNumber = firstSeatNumber + seatOffset;
+          return renderSeatButton(seatsByNumber.get(seatNumber) || { seat_number: seatNumber, is_reserved: false }, "top");
+        }).join("");
+        const bottomSeats = [3, 4, 5].map((seatOffset) => {
+          const seatNumber = firstSeatNumber + seatOffset;
+          return renderSeatButton(seatsByNumber.get(seatNumber) || { seat_number: seatNumber, is_reserved: false }, "bottom");
+        }).join("");
+        return `
+          <article class="reading-room-table-unit" aria-label="${zoneName}-${offset + 1}번 책상">
+            <div class="reading-room-chair-row is-top">${topSeats}</div>
+            <div class="reading-room-tabletop" aria-hidden="true"><span>${zoneName}-${String(offset + 1).padStart(2, "0")}</span><i></i><i></i></div>
+            <div class="reading-room-chair-row is-bottom">${bottomSeats}</div>
+          </article>
+        `;
+      }).join("");
+      const startSeat = firstTableIndex * 6 + 1;
+      const endSeat = startSeat + 29;
+      return `
+        <section class="reading-room-zone" aria-label="${zoneName} 열람 구역 ${startSeat}번부터 ${endSeat}번 좌석">
+          <header><strong>${zoneName} 열람 구역</strong><span>${startSeat}–${endSeat}</span></header>
+          <div class="reading-room-table-grid">${tables}</div>
+        </section>
+      `;
+    };
+    seatGrid.innerHTML = `${renderZone(0)}<div class="reading-room-center-aisle" aria-hidden="true"><span>중앙 통로</span></div>${renderZone(1)}`;
   };
 
   const loadAvailability = async () => {
+    const requestId = ++availabilityRequestId;
     selectedSeats = new Set();
     updateSubmitButton();
+    const timeRange = validateTimeRange();
+    if (!timeRange.valid) {
+      availability = [];
+      seatGrid.innerHTML = `<div class="request-empty compact reading-room-seat-error"><strong>이용 시간을 확인해 주세요.</strong><p>${escapeHTML(timeRange.message)}</p></div>`;
+      setMessage(timeRange.message);
+      return;
+    }
+    seatGrid.innerHTML = '<div class="request-empty compact reading-room-seat-error"><strong>좌석 배치를 불러오는 중입니다.</strong><p>선택한 시간과 겹치는 예약을 확인하고 있습니다.</p></div>';
     setMessage("좌석 현황을 불러오는 중입니다...");
     const { data, error } = await window.btlrSupabase.rpc("get_reading_room_availability", {
       target_date: dateInput.value,
-      target_time_slot: timeInput.value,
+      target_start_time: startTimeInput.value,
+      target_end_time: endTimeInput.value,
     });
+    if (requestId !== availabilityRequestId) return;
     if (error) {
       availability = [];
       seatGrid.innerHTML = '<div class="request-empty compact reading-room-seat-error"><strong>좌석 현황을 불러오지 못했습니다.</strong><p>데이터베이스 설정을 확인한 뒤 다시 시도해 주세요.</p></div>';
@@ -3065,8 +3191,15 @@ async function initReadingRoomPage() {
     }
     availability = data || [];
     renderSeats();
+    updateSubmitButton();
     const availableCount = availability.filter((seat) => !seat.is_reserved).length;
-    setMessage(`${READING_ROOM_SEATS}석 중 ${availableCount}석을 예약할 수 있습니다.`, true);
+    if (reservationStateError) {
+      setMessage(reservationStateError);
+    } else if (hasUpcomingReservation) {
+      setMessage("예정된 열람실 예약이 있습니다. 기존 예약을 취소한 뒤 새 좌석을 선택할 수 있습니다.");
+    } else {
+      setMessage(`${READING_ROOM_SEATS}석 중 ${availableCount}석이 비어 있습니다. 좌석을 최대 ${READING_ROOM_MAX_SELECTED_SEATS}개까지 선택하세요.`, true);
+    }
   };
 
   const loadMyReadingRoomReservations = async () => {
@@ -3074,19 +3207,26 @@ async function initReadingRoomPage() {
     target.innerHTML = '<p class="request-loading">예약 내역을 불러오는 중...</p>';
     const { data, error } = await window.btlrSupabase
       .from("reading_room_reservations")
-      .select("id, reservation_group_id, seat_number, reservation_date, time_slot, created_at")
+      .select("id, reservation_group_id, seat_number, reservation_date, start_time, end_time, created_at")
       .eq("user_id", user.id)
       .eq("status", "active")
       .gte("reservation_date", getLocalDateInputValue())
       .order("reservation_date", { ascending: true })
-      .order("time_slot", { ascending: true });
+      .order("start_time", { ascending: true });
 
     if (error) {
       readingRoomReservationsCache = [];
+      reservationStateLoaded = true;
+      hasUpcomingReservation = true;
+      reservationStateError = `예약 상태를 확인하지 못했습니다. ${error.message}`;
       target.innerHTML = `<p class="request-loading">${escapeHTML(error.message)}</p>`;
+      selectedSeats = new Set();
+      renderSeats();
+      updateSubmitButton();
       return;
     }
 
+    reservationStateError = "";
     const groupedReservations = new Map();
     (data || []).forEach((reservation) => {
       const groupId = reservation.reservation_group_id || reservation.id;
@@ -3095,13 +3235,19 @@ async function initReadingRoomPage() {
           id: reservation.id,
           groupId,
           reservationDate: reservation.reservation_date,
-          timeSlot: reservation.time_slot,
+          startTime: String(reservation.start_time || "").slice(0, 5),
+          endTime: String(reservation.end_time || "").slice(0, 5),
           seatNumbers: [],
         });
       }
       groupedReservations.get(groupId).seatNumbers.push(Number(reservation.seat_number));
     });
     readingRoomReservationsCache = [...groupedReservations.values()];
+    reservationStateLoaded = true;
+    hasUpcomingReservation = readingRoomReservationsCache.length > 0;
+    if (hasUpcomingReservation) selectedSeats = new Set();
+    renderSeats();
+    updateSubmitButton();
     if (!readingRoomReservationsCache.length) {
       target.innerHTML = '<div class="request-empty compact"><span>⌑</span><strong>예정된 열람실 예약이 없습니다.</strong><p>원하는 날짜와 좌석을 선택해 보세요.</p></div>';
       return;
@@ -3109,11 +3255,16 @@ async function initReadingRoomPage() {
 
     target.innerHTML = readingRoomReservationsCache.map((reservation) => {
       const seatNumbers = reservation.seatNumbers.sort((a, b) => a - b);
+      const startMinutes = parseTimeMinutes(reservation.startTime);
+      const endMinutes = parseTimeMinutes(reservation.endTime);
+      const duration = startMinutes !== null && endMinutes !== null
+        ? formatDuration(endMinutes - startMinutes)
+        : "이용 시간 확인 필요";
       return `
       <article class="room-reservation-card">
-        <div class="room-seat-number"><span>${seatNumbers.length}</span><small>명</small></div>
-        <div><strong>${formatDate(reservation.reservationDate)}</strong><p>${escapeHTML(reservation.timeSlot.replace("-", " - "))}<br />좌석 ${seatNumbers.join(", ")}번</p></div>
-        <button class="button button-secondary" type="button" data-cancel-room-reservation="${reservation.id}">전체 취소</button>
+        <div class="room-seat-number"><span>${seatNumbers.length}</span><small>석</small></div>
+        <div><strong>${formatDate(reservation.reservationDate)}</strong><p>${escapeHTML(reservation.startTime)} - ${escapeHTML(reservation.endTime)} · ${escapeHTML(duration)}<br />좌석 ${seatNumbers.join(", ")}번</p></div>
+        <button class="button button-secondary" type="button" data-cancel-room-reservation="${reservation.id}" data-reserved-seat-count="${seatNumbers.length}">전체 취소</button>
       </article>
     `;
     }).join("");
@@ -3123,11 +3274,10 @@ async function initReadingRoomPage() {
     const button = event.target.closest("[data-room-seat]");
     if (!button || button.disabled) return;
     const seatNumber = Number(button.dataset.roomSeat);
-    const partySize = Number(partySizeInput.value);
     if (selectedSeats.has(seatNumber)) {
       selectedSeats.delete(seatNumber);
-    } else if (selectedSeats.size >= partySize) {
-      setMessage(`선택한 인원은 ${partySize}명입니다. 다른 좌석을 고르려면 선택한 좌석을 먼저 해제해 주세요.`);
+    } else if (selectedSeats.size >= READING_ROOM_MAX_SELECTED_SEATS) {
+      setMessage(`좌석은 한 번에 최대 ${READING_ROOM_MAX_SELECTED_SEATS}개까지 선택할 수 있습니다.`);
       return;
     } else {
       selectedSeats.add(seatNumber);
@@ -3136,58 +3286,66 @@ async function initReadingRoomPage() {
     updateSubmitButton();
     const selectedSeatNumbers = [...selectedSeats].sort((a, b) => a - b);
     setMessage(selectedSeatNumbers.length
-      ? `${partySize}명 중 ${selectedSeatNumbers.length}명 좌석을 선택했습니다.`
-      : "예약할 좌석을 선택해 주세요.", selectedSeatNumbers.length === partySize);
+      ? `${selectedSeatNumbers.join(", ")}번 좌석을 선택했습니다. (${selectedSeatNumbers.length}/${READING_ROOM_MAX_SELECTED_SEATS})`
+      : `예약할 좌석을 최대 ${READING_ROOM_MAX_SELECTED_SEATS}개까지 선택해 주세요.`, true);
   });
 
   document.getElementById("reading-room-filter")?.addEventListener("change", (event) => {
-    if (event.target === dateInput || event.target === timeInput) loadAvailability();
-  });
-  partySizeInput.addEventListener("change", () => {
-    const partySize = Number(partySizeInput.value);
-    selectedSeats = new Set([...selectedSeats].slice(0, partySize));
-    renderSeats();
-    updateSubmitButton();
-    setMessage(`${partySize}명 예약입니다. 좌석을 ${partySize}개 선택해 주세요.`);
+    if (event.target === startTimeInput) syncEndTimeRange();
+    if (event.target === dateInput || event.target === startTimeInput || event.target === endTimeInput) {
+      loadAvailability();
+    }
   });
   document.getElementById("refresh-reading-room")?.addEventListener("click", async () => {
-    await Promise.all([loadAvailability(), loadMyReadingRoomReservations()]);
+    await loadMyReadingRoomReservations();
+    await loadAvailability();
   });
 
   submitButton.addEventListener("click", async () => {
-    const partySize = Number(partySizeInput.value);
     const selectedSeatNumbers = [...selectedSeats].sort((a, b) => a - b);
-    if (selectedSeatNumbers.length !== partySize) return;
+    const timeRange = validateTimeRange();
+    if (hasUpcomingReservation || !timeRange.valid || selectedSeatNumbers.length < 1 || selectedSeatNumbers.length > READING_ROOM_MAX_SELECTED_SEATS) return;
     submitButton.disabled = true;
     submitButton.textContent = "예약 처리 중...";
     const { error } = await window.btlrSupabase.rpc("reserve_reading_room_seats", {
       target_date: dateInput.value,
-      target_time_slot: timeInput.value,
+      target_start_time: startTimeInput.value,
+      target_end_time: endTimeInput.value,
       target_seat_numbers: selectedSeatNumbers,
     });
     if (error) {
       setMessage(error.message);
+      await loadMyReadingRoomReservations();
       await loadAvailability();
       return;
     }
-    showToast(`${partySize}명, ${selectedSeatNumbers.join(", ")}번 좌석을 예약했습니다.`);
-    await Promise.all([loadAvailability(), loadMyReadingRoomReservations()]);
+    showToast(`${selectedSeatNumbers.length}석을 ${formatDuration(timeRange.durationMinutes)} 동안 예약했습니다.`);
+    await loadMyReadingRoomReservations();
+    await loadAvailability();
   });
 
   document.getElementById("reading-room-reservation-list")?.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-cancel-room-reservation]");
     if (!button) return;
-    if (!window.confirm("이 열람실 예약을 취소할까요?")) return;
+    const seatCount = Number(button.dataset.reservedSeatCount) || 1;
+    if (!window.confirm(`예약한 ${seatCount}개 좌석을 모두 취소할까요?`)) return;
     button.disabled = true;
     const { error } = await window.btlrSupabase.rpc("cancel_reading_room_reservation", {
       target_reservation_id: button.dataset.cancelRoomReservation,
     });
     showToast(error ? error.message : "열람실 예약을 취소했습니다.");
-    if (!error) await Promise.all([loadAvailability(), loadMyReadingRoomReservations()]);
-    else button.disabled = false;
+    if (!error) {
+      await loadMyReadingRoomReservations();
+      await loadAvailability();
+    } else {
+      button.disabled = false;
+    }
   });
 
-  await Promise.all([loadAvailability(), loadMyReadingRoomReservations()]);
+  syncEndTimeRange();
+  updateSubmitButton();
+  await loadMyReadingRoomReservations();
+  await loadAvailability();
 }
 
 async function initBookRequestPage() {

@@ -690,10 +690,14 @@ img {
 
 /* Header */
 .site-header {
-  position: relative;
-  z-index: 20;
+  position: sticky;
+  z-index: 180;
+  top: 0;
   background: rgba(246, 241, 232, 0.96);
   border-bottom: 1px solid rgba(79, 48, 32, 0.08);
+  box-shadow: 0 6px 20px rgba(79, 48, 32, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .header-inner {

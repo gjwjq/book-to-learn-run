@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="BOOK TO LEARN &amp; RUN 문의 게시판" />
+    <title>문의 게시판 | BOOK TO LEARN &amp; RUN</title>
+    <link rel="icon" href="image/logo.png" type="image/png" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="config.js" defer></script>
+    <script src="supabase-client.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body data-page="inquiry">
+    <a class="skip-link" href="#main-content">본문 바로가기</a>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="index.html" aria-label="BOOK TO LEARN &amp; RUN 홈"><span class="brand-mark" aria-hidden="true"><span></span></span><span class="brand-copy"><strong>BOOK TO LEARN &amp; RUN</strong><small>PUBLIC LIBRARY SERVICE</small></span></a>
+        <form class="header-search" role="search"><label class="sr-only" for="header-search-inquiry">도서 검색</label><input id="header-search-inquiry" name="q" type="search" placeholder="책 제목, 저자, 키워드 검색" /><button type="submit" aria-label="검색"><span aria-hidden="true">⌕</span><span class="search-text">검색</span></button></form>
+        <div class="auth-area" data-auth-area></div>
+      </div>
+      <nav class="main-nav" aria-label="주요 메뉴"><div class="nav-inner"><a href="index.html">홈</a><a href="search.html">도서검색</a><a class="active inquiry-nav-link" href="inquiry.html">문의 게시판</a><a href="mypage.html">마이페이지</a><span class="nav-message">궁금한 점을 남기면 관리자가 답변합니다.</span></div></nav>
+    </header>
+
+    <main id="main-content" class="page-main inquiry-main">
+      <section class="page-hero small"><div class="shell"><p class="eyebrow">INQUIRY BOARD</p><h1>문의 게시판</h1><p>도서관 이용에 관한 문의를 남기고 답변을 확인하세요.</p></div></section>
+      <section class="shell inquiry-layout">
+        <aside class="inquiry-compose" id="inquiry-compose">
+          <div class="inquiry-section-heading"><p class="eyebrow">NEW INQUIRY</p><h2>문의 작성</h2></div>
+          <form id="inquiry-form" class="inquiry-form">
+            <div><label for="inquiry-title">제목</label><input id="inquiry-title" name="title" type="text" maxlength="100" required placeholder="문의 제목을 입력하세요" /></div>
+            <div><label for="inquiry-image">사진 <small>선택 사항 · JPG, PNG, WEBP</small></label><input id="inquiry-image" name="image" type="file" accept="image/jpeg,image/png,image/webp" /><div id="inquiry-image-preview" class="inquiry-image-preview"><span>선택한 사진 미리보기</span></div></div>
+            <div><label for="inquiry-content">문의 내용</label><textarea id="inquiry-content" name="content" rows="8" maxlength="1000" required placeholder="문의 내용을 입력하세요"></textarea><p class="inquiry-character-count"><span id="inquiry-character-count">0</span> / 1000자</p></div>
+            <label class="inquiry-secret-option"><input name="isSecret" type="checkbox" /><span><strong>비밀글로 작성</strong><small>게시판에는 익명·비밀글로 표시되고 작성자와 관리자만 내용을 확인합니다.</small></span></label>
+            <button class="button button-primary button-full" type="submit">문의 등록</button>
+            <p id="inquiry-form-message" class="form-message" role="alert"></p>
+          </form>
+        </aside>
+
+        <section class="inquiry-board" aria-labelledby="inquiry-board-title">
+          <div class="inquiry-board-heading"><div><p class="eyebrow">ALL INQUIRIES</p><h2 id="inquiry-board-title">전체 문의</h2></div><button id="refresh-inquiries" class="button button-secondary" type="button">새로고침</button></div>
+          <div id="inquiry-list" class="inquiry-list" aria-live="polite"></div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Run&amp;Learn</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="BOOK TO LEARN & RUN 마이페이지" />
+    <meta name="description" content="BOOK TO LEARN &amp; RUN 마이페이지" />
     <title>마이페이지 | BOOK TO LEARN &amp; RUN</title>
     <link rel="icon" href="image/logo.png" type="image/png" />
     <link rel="stylesheet" href="style.css" />
@@ -16,7 +16,7 @@
     <a class="skip-link" href="#main-content">본문 바로가기</a>
     <header class="site-header">
       <div class="header-inner">
-        <a class="brand" href="index.html" aria-label="BOOK TO LEARN & RUN 홈"><span class="brand-mark" aria-hidden="true"><span></span></span><span class="brand-copy"><strong>BOOK TO LEARN &amp; RUN</strong><small>PUBLIC LIBRARY SERVICE</small></span></a>
+        <a class="brand" href="index.html" aria-label="BOOK TO LEARN &amp; RUN 홈"><span class="brand-mark" aria-hidden="true"><span></span></span><span class="brand-copy"><strong>BOOK TO LEARN &amp; RUN</strong><small>PUBLIC LIBRARY SERVICE</small></span></a>
         <form class="header-search" role="search"><label class="sr-only" for="header-search-mypage">도서 검색</label><input id="header-search-mypage" name="q" type="search" placeholder="책 제목, 저자, 키워드 검색" /><button type="submit" aria-label="검색"><span aria-hidden="true">⌕</span><span class="search-text">검색</span></button></form>
         <div class="auth-area" data-auth-area></div>
       </div>
@@ -31,6 +31,7 @@
           <a href="#favorites-section"><span>♡</span>찜한 도서 <b id="favorite-count">0</b></a>
           <a href="#loans-section"><span>↗</span>대여한 도서 <b id="loan-count">0</b></a>
           <a href="#reservations-section"><span>⌚</span>예약한 도서 <b id="reservation-count">0</b></a>
+          <a href="#reading-room-section"><span>⌑</span>열람실 예약 <b id="reading-room-count">0</b></a>
           <a href="#account-section"><span>⚙</span>회원정보</a>
         </nav>
         <section class="dashboard-section" id="account-section">
@@ -63,6 +64,10 @@
         <section class="dashboard-section" id="reservations-section">
           <div class="dashboard-heading"><div><p class="eyebrow">MY RESERVATIONS</p><h2>예약한 도서</h2></div><a href="search.html">다른 도서 둘러보기 →</a></div>
           <div class="my-list" id="reservation-list" aria-live="polite"></div>
+        </section>
+        <section class="dashboard-section" id="reading-room-section">
+          <div class="dashboard-heading"><div><p class="eyebrow">READING ROOM</p><h2>열람실 예약 현황</h2></div><a href="reading-room.html">열람실 좌석 보기 →</a></div>
+          <div class="my-room-reservation-list" id="mypage-reading-room-list" aria-live="polite"></div>
         </section>
       </section>
     </main>

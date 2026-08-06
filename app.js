@@ -384,6 +384,7 @@ async function initApp() {
     admin: initAdminPage,
     request: initBookRequestPage,
     "reading-room": initReadingRoomPage,
+    inquiry: initInquiryPage,
   };
 
   if (pageInitializers[page]) {
@@ -465,7 +466,7 @@ function getCurrentRelativeUrl() {
 function getSafeNextUrl() {
   const next = getQueryParam("next");
   if (!next) return "mypage.html";
-  return /^(index|search|detail|reserve|mypage|admin|request|reading-room)\.html(?:[?#].*)?$/.test(next)
+  return /^(index|search|detail|reserve|mypage|admin|request|reading-room|inquiry)\.html(?:[?#].*)?$/.test(next)
     ? next
     : "mypage.html";
 }
@@ -1110,6 +1111,17 @@ function renderAuthArea() {
     }
     readingRoomLink.classList.toggle("active", getCurrentPage() === "reading-room");
 
+    let inquiryLink = navigation.querySelector(".inquiry-nav-link");
+    if (!inquiryLink) {
+      inquiryLink = document.createElement("a");
+      inquiryLink.className = "inquiry-nav-link";
+      inquiryLink.href = "inquiry.html";
+      inquiryLink.textContent = "문의 게시판";
+      const myPageLink = navigation.querySelector('a[href="mypage.html"]');
+      navigation.insertBefore(inquiryLink, myPageLink || navigation.querySelector(".nav-message"));
+    }
+    inquiryLink.classList.toggle("active", getCurrentPage() === "inquiry");
+
     const existingLink = navigation.querySelector(".request-nav-link");
     if (user?.role === "member" && !existingLink) {
       const link = document.createElement("a");
@@ -1123,8 +1135,10 @@ function renderAuthArea() {
     }
 
     const adminNavigationItems = [
-      { href: "admin.html#users", label: "회원 관리", section: "users" },
-      { href: "admin.html#books", label: "도서 관리", section: "books" },
+      { href: "admin.html#users", label: "회원 관리", section: "users", icon: "♙" },
+      { href: "admin.html#books", label: "도서 관리", section: "books", icon: "▤" },
+      { href: "admin.html#room-reservations", label: "열람실 관리", section: "room-reservations", icon: "⌑" },
+      { href: "admin.html#inquiries", label: "문의 관리", section: "inquiries", icon: "✉" },
     ];
 
     if (user?.role === "admin") {
@@ -1135,7 +1149,7 @@ function renderAuthArea() {
           link.dataset.adminNav = item.section;
           link.className = `admin-nav-link${index === 0 ? " admin-nav-first" : ""}`;
           link.href = item.href;
-          link.innerHTML = `<span aria-hidden="true">${index === 0 ? "♙" : "▤"}</span>${item.label}`;
+          link.innerHTML = `<span aria-hidden="true">${item.icon}</span>${item.label}`;
           navigation.insertBefore(link, navigation.querySelector(".nav-message"));
         }
       });
@@ -1148,8 +1162,10 @@ function renderAuthArea() {
 }
 
 function updateAdminNavigationState() {
+  const supportedSections = new Set(["users", "books", "room-reservations", "inquiries"]);
+  const hashSection = window.location.hash.replace(/^#/, "");
   const activeSection = getCurrentPage() === "admin"
-    ? window.location.hash === "#books" ? "books" : "users"
+    ? supportedSections.has(hashSection) ? hashSection : "users"
     : "";
   document.querySelectorAll("[data-admin-nav]").forEach((link) => {
     link.classList.toggle("active", link.dataset.adminNav === activeSection);
@@ -1692,10 +1708,17 @@ async function initAdminPage() {
     renderAdminUsers(),
     renderAdminBooks(),
     renderAdminBookRequests(),
+    renderAdminRoomReservations(),
+    renderAdminInquiries(),
   ]);
 
   document.getElementById("refresh-users")?.addEventListener("click", renderAdminUsers);
   document.getElementById("refresh-book-requests")?.addEventListener("click", renderAdminBookRequests);
+  document.getElementById("refresh-admin-room-reservations")?.addEventListener("click", renderAdminRoomReservations);
+  document.getElementById("refresh-admin-inquiries")?.addEventListener("click", renderAdminInquiries);
+  document.getElementById("admin-room-reservation-list")?.addEventListener("click", handleAdminRoomReservationAction);
+  document.getElementById("admin-inquiry-list")?.addEventListener("click", handleAdminInquiryImageAction);
+  document.getElementById("admin-inquiry-list")?.addEventListener("submit", handleAdminInquiryAnswerSubmit);
   document.getElementById("reset-book-create")?.addEventListener("click", resetAdminBookForm);
   document.getElementById("admin-book-form")?.addEventListener("submit", saveNewAdminBook);
   document.getElementById("admin-book-edit-form")?.addEventListener("submit", saveEditedAdminBook);
@@ -2982,6 +3005,129 @@ async function handleAdminBookAction(event) {
   }
 }
 
+function formatRoomTime(value) {
+  return String(value || "").slice(0, 5) || "-";
+}
+
+function groupReadingRoomReservations(rows) {
+  const groups = new Map();
+  (rows || []).forEach((row) => {
+    const groupId = row.reservation_group_id || row.id;
+    if (!groups.has(groupId)) {
+      groups.set(groupId, {
+        id: row.id,
+        groupId,
+        userId: row.user_id,
+        userName: row.user_name || "",
+        userEmail: row.user_email || "",
+        reservationDate: row.reservation_date,
+        startTime: formatRoomTime(row.start_time),
+        endTime: formatRoomTime(row.end_time),
+        seatNumbers: [],
+        createdAt: row.created_at,
+      });
+    }
+    const seatNumbers = Array.isArray(row.seat_numbers) ? row.seat_numbers : [row.seat_number];
+    seatNumbers.filter((seat) => Number.isInteger(Number(seat))).forEach((seat) => {
+      const normalizedSeat = Number(seat);
+      if (!groups.get(groupId).seatNumbers.includes(normalizedSeat)) {
+        groups.get(groupId).seatNumbers.push(normalizedSeat);
+      }
+    });
+  });
+  return [...groups.values()].map((group) => ({
+    ...group,
+    seatNumbers: group.seatNumbers.sort((a, b) => a - b),
+  }));
+}
+
+function createRoomReservationCard(reservation, options = {}) {
+  const isAdminView = options.admin === true;
+  const identity = isAdminView
+    ? `<div class="room-management-user"><strong>${escapeHTML(reservation.userName || "이름 없음")}</strong><span>${escapeHTML(reservation.userEmail || "-")}</span></div>`
+    : "";
+  return `
+    <article class="room-management-card">
+      <div class="room-management-date"><span>${escapeHTML(formatDate(reservation.reservationDate))}</span><strong>${escapeHTML(reservation.startTime)}–${escapeHTML(reservation.endTime)}</strong></div>
+      ${identity}
+      <div class="room-management-seats"><small>예약 좌석</small><strong>${reservation.seatNumbers.map((seat) => `${seat}번`).join(", ")}</strong><span>총 ${reservation.seatNumbers.length}석</span></div>
+      <button class="button button-danger" type="button" ${isAdminView ? `data-admin-cancel-room="${escapeHTML(reservation.groupId)}"` : `data-mypage-cancel-room="${escapeHTML(reservation.id)}"`} data-room-seat-count="${reservation.seatNumbers.length}">예약 취소</button>
+    </article>
+  `;
+}
+
+async function loadMyPageRoomReservations() {
+  const target = document.getElementById("mypage-reading-room-list");
+  const user = getCurrentUser();
+  if (!target || !user || !window.btlrSupabase) return;
+  target.innerHTML = '<p class="request-loading">열람실 예약을 불러오는 중...</p>';
+  const { data, error } = await window.btlrSupabase
+    .from("reading_room_reservations")
+    .select("id, reservation_group_id, user_id, seat_number, reservation_date, start_time, end_time, created_at")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .gte("reservation_date", getLocalDateInputValue())
+    .order("reservation_date", { ascending: true })
+    .order("start_time", { ascending: true });
+  if (error) {
+    setText("reading-room-count", 0);
+    target.innerHTML = `<div class="request-empty compact"><strong>예약 현황을 불러오지 못했습니다.</strong><p>${escapeHTML(error.message)}</p></div>`;
+    return;
+  }
+  const reservations = groupReadingRoomReservations(data);
+  setText("reading-room-count", reservations.length);
+  if (!reservations.length) {
+    target.innerHTML = '<div class="request-empty compact"><span>⌑</span><strong>예정된 열람실 예약이 없습니다.</strong><p>열람실 배치도에서 원하는 시간과 좌석을 선택해 보세요.</p><a class="button button-primary" href="reading-room.html">열람실 예약하기</a></div>';
+    return;
+  }
+  target.innerHTML = reservations.map((reservation) => createRoomReservationCard(reservation)).join("");
+}
+
+async function handleMyPageRoomReservationAction(event) {
+  const button = event.target.closest("[data-mypage-cancel-room]");
+  if (!button) return;
+  const seatCount = Number(button.dataset.roomSeatCount) || 1;
+  if (!window.confirm(`예약한 ${seatCount}개 좌석을 모두 취소할까요?`)) return;
+  button.disabled = true;
+  const { error } = await window.btlrSupabase.rpc("cancel_reading_room_reservation", {
+    target_reservation_id: button.dataset.mypageCancelRoom,
+  });
+  showToast(error ? error.message : "열람실 예약을 취소했습니다.");
+  if (error) button.disabled = false;
+  else await loadMyPageRoomReservations();
+}
+
+async function renderAdminRoomReservations() {
+  const target = document.getElementById("admin-room-reservation-list");
+  if (!target || !window.btlrSupabase) return;
+  target.innerHTML = '<p class="request-loading">열람실 예약을 불러오는 중...</p>';
+  const { data, error } = await window.btlrSupabase.rpc("admin_list_reading_room_reservations");
+  if (error) {
+    target.innerHTML = `<div class="request-empty compact"><strong>예약 목록을 불러오지 못했습니다.</strong><p>${escapeHTML(error.message)}</p></div>`;
+    return;
+  }
+  const reservations = groupReadingRoomReservations(data);
+  if (!reservations.length) {
+    target.innerHTML = '<div class="request-empty compact"><span>✓</span><strong>예정된 열람실 예약이 없습니다.</strong><p>새 예약이 등록되면 이곳에 표시됩니다.</p></div>';
+    return;
+  }
+  target.innerHTML = reservations.map((reservation) => createRoomReservationCard(reservation, { admin: true })).join("");
+}
+
+async function handleAdminRoomReservationAction(event) {
+  const button = event.target.closest("[data-admin-cancel-room]");
+  if (!button) return;
+  const seatCount = Number(button.dataset.roomSeatCount) || 1;
+  if (!window.confirm(`회원의 열람실 예약 ${seatCount}석을 모두 취소할까요?`)) return;
+  button.disabled = true;
+  const { error } = await window.btlrSupabase.rpc("admin_cancel_reading_room_reservation", {
+    target_reservation_group_id: button.dataset.adminCancelRoom,
+  });
+  showToast(error ? error.message : "회원의 열람실 예약을 취소했습니다.");
+  if (error) button.disabled = false;
+  else await renderAdminRoomReservations();
+}
+
 function getLocalDateInputValue(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -3348,6 +3494,259 @@ async function initReadingRoomPage() {
   await loadAvailability();
 }
 
+function inquiryTextMarkup(value) {
+  return escapeHTML(value || "").replace(/\n/g, "<br />");
+}
+
+async function getInquirySignedImageUrl(imagePath) {
+  if (!imagePath || !window.btlrSupabase) return "";
+  const { data, error } = await window.btlrSupabase.storage
+    .from("inquiry-images")
+    .createSignedUrl(imagePath, 3600);
+  return error ? "" : (data?.signedUrl || "");
+}
+
+async function attachInquiryImageUrls(inquiries) {
+  return Promise.all((inquiries || []).map(async (inquiry) => ({
+    ...inquiry,
+    signedImageUrl: inquiry.can_view && inquiry.image_path
+      ? await getInquirySignedImageUrl(inquiry.image_path)
+      : "",
+  })));
+}
+
+function createInquiryAnswerMarkup(inquiry, options = {}) {
+  const answer = String(inquiry.answer || "").trim();
+  if (!inquiry.is_answered) {
+    return '<div class="inquiry-answer is-pending"><strong>답변 대기</strong><p>관리자가 문의 내용을 확인하고 있습니다.</p></div>';
+  }
+  if (inquiry.is_secret && !inquiry.can_view) {
+    return '<div class="inquiry-answer is-secret"><strong>관리자 답변</strong><p>비밀 답변입니다.</p></div>';
+  }
+  return `<div class="inquiry-answer"><strong>관리자 답변</strong><p>${inquiryTextMarkup(answer)}</p><small>${formatDate(inquiry.answered_at)}</small></div>`;
+}
+
+function createPublicInquiryCard(inquiry) {
+  const secret = Boolean(inquiry.is_secret);
+  const canView = Boolean(inquiry.can_view);
+  const publicTitle = secret ? "비밀글입니다" : (inquiry.title || "제목 없음");
+  const publicAuthor = secret ? "익명" : (inquiry.author_name || "회원");
+  let bodyMarkup;
+  if (secret && !canView) {
+    bodyMarkup = `
+      <div class="inquiry-secret-placeholder"><span aria-hidden="true">🔒</span><p>작성자와 관리자만 내용을 확인할 수 있습니다.</p></div>
+      ${createInquiryAnswerMarkup(inquiry)}
+    `;
+  } else if (secret) {
+    bodyMarkup = `
+      <details class="inquiry-private-detail">
+        <summary>내 비밀 문의 내용 확인</summary>
+        <div class="inquiry-private-content"><strong>${escapeHTML(inquiry.title || "비밀 문의")}</strong><p>${inquiryTextMarkup(inquiry.content)}</p>${inquiry.signedImageUrl ? `<button class="inquiry-image-button" type="button" data-inquiry-image="${escapeHTML(inquiry.signedImageUrl)}" aria-label="문의 첨부 사진 크게 보기"><img src="${escapeHTML(inquiry.signedImageUrl)}" alt="문의 첨부 사진" /></button>` : ""}${createInquiryAnswerMarkup(inquiry)}</div>
+      </details>
+    `;
+  } else {
+    bodyMarkup = `
+      <p class="inquiry-content">${inquiryTextMarkup(inquiry.content)}</p>
+      ${inquiry.signedImageUrl ? `<button class="inquiry-image-button" type="button" data-inquiry-image="${escapeHTML(inquiry.signedImageUrl)}" aria-label="문의 첨부 사진 크게 보기"><img src="${escapeHTML(inquiry.signedImageUrl)}" alt="문의 첨부 사진" /></button>` : ""}
+      ${createInquiryAnswerMarkup(inquiry)}
+    `;
+  }
+  return `
+    <article class="inquiry-card${secret ? " is-secret" : ""}">
+      <header><div><span class="inquiry-status ${inquiry.is_answered ? "is-answered" : ""}">${inquiry.is_answered ? "답변 완료" : "답변 대기"}</span><h3>${escapeHTML(publicTitle)}</h3></div>${secret ? '<span class="inquiry-lock" aria-label="비밀글">🔒</span>' : ""}</header>
+      <div class="inquiry-meta"><span>${escapeHTML(publicAuthor)}</span><time>${formatDate(inquiry.created_at)}</time></div>
+      ${bodyMarkup}
+    </article>
+  `;
+}
+
+async function loadInquiryBoard() {
+  const target = document.getElementById("inquiry-list");
+  if (!target || !window.btlrSupabase) return;
+  target.innerHTML = '<p class="request-loading">문의 게시판을 불러오는 중...</p>';
+  const { data, error } = await window.btlrSupabase.rpc("list_inquiries");
+  if (error) {
+    target.innerHTML = `<div class="request-empty"><strong>문의 게시판을 불러오지 못했습니다.</strong><p>${escapeHTML(error.message)}</p></div>`;
+    return;
+  }
+  const inquiries = await attachInquiryImageUrls(data || []);
+  if (!inquiries.length) {
+    target.innerHTML = '<div class="request-empty"><span>✉</span><strong>등록된 문의가 없습니다.</strong><p>첫 번째 문의를 남겨 보세요.</p></div>';
+    return;
+  }
+  target.innerHTML = inquiries.map(createPublicInquiryCard).join("");
+}
+
+function openInquiryImage(url) {
+  if (!url) return;
+  const dialog = document.createElement("dialog");
+  dialog.className = "inquiry-image-dialog";
+  dialog.innerHTML = `<button type="button" aria-label="닫기">×</button><img src="${escapeHTML(url)}" alt="문의 첨부 사진 크게 보기" />`;
+  document.body.appendChild(dialog);
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog || event.target.closest("button")) dialog.close();
+  });
+  dialog.addEventListener("close", () => dialog.remove());
+  dialog.showModal();
+}
+
+async function uploadInquiryImage(file, userId) {
+  if (!file) return { path: "" };
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+  if (!allowedTypes.includes(file.type)) return { error: "사진은 JPG, PNG, WEBP 파일만 첨부할 수 있습니다." };
+  if (file.size > 5 * 1024 * 1024) return { error: "사진은 5MB 이하로 첨부해 주세요." };
+  const extensionMap = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+  const filePath = `${userId}/${Date.now()}-${window.crypto.randomUUID()}.${extensionMap[file.type]}`;
+  const { error } = await window.btlrSupabase.storage
+    .from("inquiry-images")
+    .upload(filePath, file, { contentType: file.type, upsert: false });
+  return error ? { error: error.message } : { path: filePath };
+}
+
+async function submitInquiry(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (form.dataset.submitting === "true") return;
+  const user = getCurrentUser();
+  if (!user) {
+    window.location.href = `login.html?next=${encodeURIComponent("inquiry.html")}`;
+    return;
+  }
+  if (!form.reportValidity()) return;
+  const values = Object.fromEntries(new FormData(form).entries());
+  const title = String(values.title || "").trim();
+  const content = String(values.content || "").trim();
+  const message = document.getElementById("inquiry-form-message");
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (!title || title.length > 100 || !content || content.length > 1000) {
+    if (message) message.textContent = "제목과 1000자 이내의 문의 내용을 확인해 주세요.";
+    return;
+  }
+  form.dataset.submitting = "true";
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "등록 중...";
+  }
+  let uploadedPath = "";
+  try {
+    const uploadResult = await uploadInquiryImage(form.elements.image?.files?.[0], user.id);
+    if (uploadResult.error) throw new Error(uploadResult.error);
+    uploadedPath = uploadResult.path;
+    const { error } = await window.btlrSupabase.rpc("create_inquiry", {
+      inquiry_title: title,
+      inquiry_content: content,
+      inquiry_is_secret: Boolean(form.elements.isSecret?.checked),
+      inquiry_image_path: uploadedPath || null,
+    });
+    if (error) throw error;
+    form.reset();
+    document.getElementById("inquiry-character-count").textContent = "0";
+    document.getElementById("inquiry-image-preview").innerHTML = "<span>선택한 사진 미리보기</span>";
+    if (message) {
+      message.textContent = "문의를 등록했습니다.";
+      message.classList.add("success");
+    }
+    showToast("문의를 등록했습니다.");
+    await loadInquiryBoard();
+  } catch (error) {
+    if (uploadedPath) await window.btlrSupabase.storage.from("inquiry-images").remove([uploadedPath]);
+    if (message) {
+      message.textContent = error?.message || "문의를 등록하지 못했습니다.";
+      message.classList.remove("success");
+    }
+  } finally {
+    delete form.dataset.submitting;
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = "문의 등록";
+    }
+  }
+}
+
+function initInquiryPage() {
+  const user = getCurrentUser();
+  const compose = document.getElementById("inquiry-compose");
+  const form = document.getElementById("inquiry-form");
+  if (!user && compose) {
+    compose.innerHTML = '<div class="inquiry-section-heading"><p class="eyebrow">NEW INQUIRY</p><h2>문의 작성</h2></div><div class="request-empty compact"><span>✉</span><strong>로그인 후 문의를 작성할 수 있습니다.</strong><p>문의 게시판은 로그인하지 않아도 확인할 수 있습니다.</p><a class="button button-primary" href="login.html?next=inquiry.html">로그인하고 문의하기</a></div>';
+  } else if (user?.role === "admin" && compose) {
+    compose.innerHTML = '<div class="inquiry-section-heading"><p class="eyebrow">ADMIN</p><h2>문의 답변 관리</h2></div><div class="request-empty compact"><span>✉</span><strong>관리자 문의 관리에서 답변할 수 있습니다.</strong><p>공개 게시판에서는 등록된 답변 결과를 확인합니다.</p><a class="button button-primary" href="admin.html#inquiries">문의 관리로 이동</a></div>';
+  } else if (form) {
+    form.addEventListener("submit", submitInquiry);
+    form.elements.content?.addEventListener("input", () => {
+      document.getElementById("inquiry-character-count").textContent = String(form.elements.content.value.length);
+    });
+    form.elements.image?.addEventListener("change", () => {
+      const file = form.elements.image.files?.[0];
+      const preview = document.getElementById("inquiry-image-preview");
+      if (!preview) return;
+      preview.innerHTML = file
+        ? `<img src="${escapeHTML(URL.createObjectURL(file))}" alt="첨부할 사진 미리보기" />`
+        : "<span>선택한 사진 미리보기</span>";
+    });
+  }
+  document.getElementById("refresh-inquiries")?.addEventListener("click", loadInquiryBoard);
+  document.getElementById("inquiry-list")?.addEventListener("click", (event) => {
+    const imageButton = event.target.closest("[data-inquiry-image]");
+    if (imageButton) openInquiryImage(imageButton.dataset.inquiryImage);
+  });
+  loadInquiryBoard();
+}
+
+async function renderAdminInquiries() {
+  const target = document.getElementById("admin-inquiry-list");
+  if (!target || !window.btlrSupabase) return;
+  target.innerHTML = '<p class="request-loading">문의 목록을 불러오는 중...</p>';
+  const { data, error } = await window.btlrSupabase.rpc("list_inquiries");
+  if (error) {
+    target.innerHTML = `<div class="request-empty compact"><strong>문의 목록을 불러오지 못했습니다.</strong><p>${escapeHTML(error.message)}</p></div>`;
+    return;
+  }
+  const inquiries = await attachInquiryImageUrls(data || []);
+  if (!inquiries.length) {
+    target.innerHTML = '<div class="request-empty compact"><span>✓</span><strong>등록된 문의가 없습니다.</strong><p>새 문의가 등록되면 이곳에 표시됩니다.</p></div>';
+    return;
+  }
+  target.innerHTML = inquiries.map((inquiry) => `
+    <article class="admin-inquiry-card">
+      <header><div><span class="inquiry-status ${inquiry.is_answered ? "is-answered" : ""}">${inquiry.is_answered ? "답변 완료" : "답변 대기"}</span><h3>${escapeHTML(inquiry.title || "제목 없음")}</h3></div>${inquiry.is_secret ? '<span class="admin-secret-badge">비밀글</span>' : '<span class="admin-public-badge">공개글</span>'}</header>
+      <div class="inquiry-meta"><span>${escapeHTML(inquiry.author_name || "회원")} · ${escapeHTML(inquiry.author_email || "-")}</span><time>${formatDate(inquiry.created_at)}</time></div>
+      <p class="inquiry-content">${inquiryTextMarkup(inquiry.content)}</p>
+      ${inquiry.signedImageUrl ? `<button class="inquiry-image-button" type="button" data-inquiry-image="${escapeHTML(inquiry.signedImageUrl)}"><img src="${escapeHTML(inquiry.signedImageUrl)}" alt="문의 첨부 사진" /></button>` : ""}
+      <form class="admin-inquiry-answer-form" data-admin-inquiry-answer="${escapeHTML(inquiry.id)}">
+        <label for="admin-answer-${escapeHTML(inquiry.id)}">관리자 답변</label>
+        <textarea id="admin-answer-${escapeHTML(inquiry.id)}" name="answer" rows="4" maxlength="1000" required placeholder="답변 내용을 입력하세요">${escapeHTML(inquiry.answer || "")}</textarea>
+        <div><span>${inquiry.is_answered ? `답변일 ${formatDate(inquiry.answered_at)}` : "1000자 이내"}</span><button class="button button-primary" type="submit">${inquiry.is_answered ? "답변 수정" : "답변 등록"}</button></div>
+      </form>
+    </article>
+  `).join("");
+}
+
+function handleAdminInquiryImageAction(event) {
+  const imageButton = event.target.closest("[data-inquiry-image]");
+  if (imageButton) openInquiryImage(imageButton.dataset.inquiryImage);
+}
+
+async function handleAdminInquiryAnswerSubmit(event) {
+  const form = event.target.closest("[data-admin-inquiry-answer]");
+  if (!form) return;
+  event.preventDefault();
+  const answer = String(form.elements.answer?.value || "").trim();
+  if (!answer || answer.length > 1000) {
+    showToast("답변은 1자 이상 1000자 이내로 입력해 주세요.");
+    return;
+  }
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
+  const { error } = await window.btlrSupabase.rpc("admin_answer_inquiry", {
+    target_inquiry_id: form.dataset.adminInquiryAnswer,
+    answer_content: answer,
+  });
+  showToast(error ? error.message : "문의 답변을 저장했습니다.");
+  if (error) button.disabled = false;
+  else await renderAdminInquiries();
+}
+
 async function initBookRequestPage() {
   const user = requireLogin();
   if (!user) return;
@@ -3610,6 +4009,10 @@ function initMyPage() {
     "예약한 도서가 없어요",
     "대출 중인 책을 예약하면 이곳에서 현황을 확인할 수 있어요.",
   );
+
+  const roomReservationList = document.getElementById("mypage-reading-room-list");
+  if (roomReservationList) roomReservationList.onclick = handleMyPageRoomReservationAction;
+  loadMyPageRoomReservations();
 }
 
 async function updateMyName(event) {

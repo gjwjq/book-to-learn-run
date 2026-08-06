@@ -4234,9 +4234,12 @@ img {
 }
 
 .reading-room-floor {
-  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(820px, 1fr) 24px;
+  grid-template-rows: 26px auto 36px;
+  gap: 14px 16px;
   margin-top: 20px;
-  padding: 58px 58px 72px;
+  padding: 17px 18px;
   overflow-x: auto;
   border: 1px solid #d9cab9;
   border-radius: 18px;
@@ -4249,16 +4252,14 @@ img {
 }
 
 .reading-room-seat-grid {
-  position: relative;
-  z-index: 2;
+  grid-column: 2;
+  grid-row: 2;
   display: grid;
-  min-width: 820px;
+  min-width: 0;
   gap: 22px;
 }
 
 .reading-room-shelf {
-  position: absolute;
-  z-index: 1;
   color: #f4e7d8;
   background: #68432d;
   border: 3px solid #4d2e1e;
@@ -4271,9 +4272,8 @@ img {
 }
 
 .reading-room-shelf-top {
-  top: 17px;
-  left: 78px;
-  right: 78px;
+  grid-column: 2;
+  grid-row: 1;
   height: 26px;
   display: grid;
   grid-template-columns: auto repeat(6, 1fr);
@@ -4292,8 +4292,7 @@ img {
 
 .reading-room-shelf-left,
 .reading-room-shelf-right {
-  top: 76px;
-  bottom: 89px;
+  grid-row: 2;
   width: 24px;
   display: grid;
   place-items: center;
@@ -4301,8 +4300,8 @@ img {
   writing-mode: vertical-rl;
 }
 
-.reading-room-shelf-left { left: 18px; }
-.reading-room-shelf-right { right: 18px; }
+.reading-room-shelf-left { grid-column: 1; }
+.reading-room-shelf-right { grid-column: 3; }
 
 .reading-room-zone {
   padding: 15px 18px 18px;
@@ -4505,10 +4504,8 @@ img {
 .reading-room-center-aisle::after { right: 0; }
 
 .reading-room-floor-footer {
-  position: absolute;
-  left: 64px;
-  right: 64px;
-  bottom: 17px;
+  grid-column: 2;
+  grid-row: 3;
   height: 36px;
   display: grid;
   grid-template-columns: 1fr 1.5fr 1fr;
@@ -4636,11 +4633,11 @@ img {
   }
 
   .reading-room-seat-grid {
-    min-width: 760px;
+    min-width: 0;
   }
 
   .reading-room-floor {
-    padding-inline: 52px;
+    grid-template-columns: 24px minmax(760px, 1fr) 24px;
   }
 
   .reading-room-table-grid {
@@ -4816,12 +4813,14 @@ img {
 
   .reading-room-floor {
     margin-inline: -4px;
-    padding: 50px 43px 64px;
+    grid-template-columns: 20px minmax(680px, 1fr) 20px;
+    gap: 11px 12px;
+    padding: 14px;
     border-radius: 14px;
   }
 
   .reading-room-seat-grid {
-    min-width: 710px;
+    min-width: 0;
     gap: 16px;
   }
 
@@ -4830,17 +4829,16 @@ img {
   }
 
   .reading-room-table-grid {
+    grid-template-columns: repeat(5, minmax(120px, 1fr));
     gap: 11px;
   }
 
-  .reading-room-shelf-top {
-    left: 60px;
-    right: 60px;
+  .reading-room-shelf-left,
+  .reading-room-shelf-right {
+    width: 20px;
   }
 
   .reading-room-floor-footer {
-    left: 50px;
-    right: 50px;
     gap: 18px;
   }
 

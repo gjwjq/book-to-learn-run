@@ -178,8 +178,10 @@
 .inquiry-image-preview {
   min-height: 108px;
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 10px;
   place-items: center;
-  overflow: hidden;
+  padding: 10px;
   color: var(--muted);
   background: var(--cream);
   border: 1px dashed var(--line);
@@ -187,10 +189,33 @@
   font-size: 0.76rem;
 }
 
+.inquiry-image-preview figure {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 9px;
+}
+
 .inquiry-image-preview img {
   width: 100%;
-  max-height: 220px;
-  object-fit: contain;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.inquiry-image-preview figcaption {
+  min-width: 22px;
+  height: 22px;
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(79, 48, 32, 0.88);
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
 }
 
 .inquiry-character-count {
@@ -342,9 +367,16 @@
   overflow-wrap: anywhere;
 }
 
+.inquiry-image-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 120px));
+  gap: 9px;
+  margin-top: 16px;
+}
+
 .inquiry-image-button {
   width: 120px;
-  margin-top: 16px;
+  margin: 0;
   padding: 0;
   overflow: hidden;
   background: var(--cream);
@@ -807,6 +839,220 @@ img {
   background: var(--cream-deep);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.auth-area .notification-toggle {
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+  position: relative;
+  color: var(--brown);
+  background: var(--paper);
+  border-color: var(--line);
+  border-radius: 50%;
+  font-size: 1.15rem;
+}
+
+.notification-toggle b {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--orange);
+  border: 2px solid var(--cream);
+  border-radius: 999px;
+  font-size: 0.55rem;
+  line-height: 1;
+}
+
+.notification-banner {
+  position: relative;
+  z-index: 19;
+  color: #fff;
+  background: linear-gradient(100deg, var(--brown), var(--brown-2));
+  box-shadow: 0 8px 24px rgba(79, 48, 32, 0.14);
+}
+
+.notification-banner-inner {
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.notification-banner-inner .notification-icon {
+  color: var(--brown);
+  background: #f8e5d7;
+}
+
+.notification-banner-inner strong {
+  display: block;
+  font-size: 0.86rem;
+}
+
+.notification-banner-inner p {
+  margin-top: 1px;
+  color: #eadbd0;
+  font-size: 0.72rem;
+}
+
+.notification-banner-inner > a {
+  padding: 8px 13px;
+  color: var(--brown);
+  background: #fff;
+  border-radius: 9px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.notification-banner-inner > button {
+  width: 34px;
+  height: 34px;
+  color: #fff;
+  background: transparent;
+  border-radius: 50%;
+  font-size: 1.3rem;
+}
+
+.notification-panel {
+  width: min(390px, calc(100% - 24px));
+  max-height: min(680px, calc(100vh - 32px));
+  position: fixed;
+  z-index: 220;
+  top: 16px;
+  right: 16px;
+  overflow: hidden;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(39, 25, 17, 0.28);
+}
+
+.notification-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 15px;
+  border-bottom: 1px solid var(--line);
+}
+
+.notification-panel-heading span {
+  color: var(--orange);
+  font-family: Georgia, serif;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.notification-panel-heading h2 {
+  color: var(--brown);
+  font-size: 1.25rem;
+}
+
+.notification-panel-heading button {
+  width: 38px;
+  height: 38px;
+  color: var(--brown);
+  background: var(--cream);
+  border-radius: 50%;
+  font-size: 1.35rem;
+}
+
+.notification-list {
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 15px 20px;
+  background: #fff9f2;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.18s ease;
+}
+
+.notification-item:hover {
+  background: var(--orange-pale);
+}
+
+.notification-item.is-read {
+  background: var(--paper);
+  opacity: 0.66;
+}
+
+.notification-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #fff;
+  background: var(--brown);
+  border-radius: 50%;
+  font-family: Georgia, serif;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.notification-item > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.notification-item strong {
+  color: var(--brown);
+  font-size: 0.82rem;
+}
+
+.notification-item small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.notification-item time {
+  color: var(--brown-soft);
+  font-size: 0.62rem;
+}
+
+.notification-read-all {
+  width: 100%;
+  min-height: 46px;
+  color: var(--brown);
+  background: var(--cream);
+  border-top: 1px solid var(--line);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.notification-empty {
+  min-height: 180px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.notification-empty span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  background: var(--green-pale);
+  border-radius: 50%;
 }
 
 .main-nav {
@@ -5653,5 +5899,37 @@ img {
     min-height: 40px;
     padding-inline: 15px;
     font-size: 0.72rem;
+  }
+}
+
+/* 알림 UI는 기본 규칙보다 뒤에서 모바일 크기를 다시 지정해야 한다. */
+@media (max-width: 560px) {
+  .notification-banner-inner {
+    min-height: 72px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 9px;
+  }
+
+  .notification-banner-inner p {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .notification-banner-inner > a {
+    display: none;
+  }
+
+  .notification-panel {
+    top: 8px;
+    right: 8px;
+    width: calc(100% - 16px);
+    max-height: calc(100vh - 16px);
+    border-radius: 16px;
+  }
+
+  .notification-list {
+    max-height: calc(100vh - 132px);
   }
 }

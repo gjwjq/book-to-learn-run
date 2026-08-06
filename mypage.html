@@ -46,8 +46,12 @@
             </form>
             <form id="profile-password-form" class="account-form">
               <h3>비밀번호 변경</h3>
+              <label for="profile-current-password">현재 비밀번호</label>
+              <input id="profile-current-password" name="currentPassword" type="password" minlength="8" autocomplete="current-password" placeholder="현재 비밀번호" required />
               <label for="profile-password">새 비밀번호</label>
-              <input id="profile-password" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="8자 이상" required />
+              <input id="profile-password" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="새 비밀번호 8자 이상" required />
+              <label for="profile-password-confirm">새 비밀번호 확인</label>
+              <input id="profile-password-confirm" name="passwordConfirm" type="password" minlength="8" autocomplete="new-password" placeholder="새 비밀번호를 한 번 더 입력" required />
               <button class="button button-primary" type="submit">비밀번호 저장</button>
               <p id="profile-password-message" class="form-message" role="alert"></p>
             </form>

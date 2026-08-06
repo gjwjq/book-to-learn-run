@@ -290,6 +290,9 @@ let adminBookImportResults = [];
 let userBookSearchResults = [];
 let myBookRequestsCache = [];
 let adminUsersCache = [];
+let notificationsCache = [];
+let notificationPollTimer = null;
+let notificationRealtimeChannel = null;
 let adminUserPage = 1;
 let adminBookPage = 1;
 const adminSelectedBookIds = new Set();
@@ -371,6 +374,7 @@ async function initApp() {
   handleHeaderSearch();
   renderAuthArea();
   handleGlobalActions();
+  initNotificationCenter();
 
   const page = getCurrentPage();
   const pageInitializers = {
@@ -601,13 +605,14 @@ function createBookCardMarkup(book) {
   const user = getCurrentUser();
   const favorite = isFavorite(book.id);
   const loanedByUser = isLoaned(book.id);
+  const readyForUser = isBookReadyForCurrentUser(book.id);
   const isAvailable = (book.availableQuantity ?? (book.loanStatus === "대출 가능" ? 1 : 0)) > 0;
   const mainAction = user?.role === "admin"
     ? '<button class="card-main-action is-disabled" type="button" disabled>관리자 계정</button>'
     : loanedByUser
       ? '<button class="card-main-action is-disabled" type="button" disabled>대여 중</button>'
-    : isAvailable
-      ? `<button class="card-main-action" type="button" data-action="borrow" data-book-id="${book.id}">대출하기</button>`
+    : readyForUser || isAvailable
+      ? `<button class="card-main-action" type="button" data-action="borrow" data-book-id="${book.id}">${readyForUser ? "예약 도서 대출하기" : "대출하기"}</button>`
       : `<a class="card-main-action reserve-action" href="reserve.html?id=${encodeURIComponent(book.id)}">예약 신청</a>`;
 
   return `
@@ -708,8 +713,9 @@ async function signupUser(formData) {
   const name = String(formData.name || "").trim().replace(/\s+/g, " ");
   const email = String(formData.email || "").trim().toLocaleLowerCase();
   const password = String(formData.password || "");
+  const passwordConfirm = String(formData.passwordConfirm || "");
 
-  if (!loginId || !name || !email || !password) {
+  if (!loginId || !name || !email || !password || !passwordConfirm) {
     return { success: false, message: "모든 입력 항목을 작성해 주세요." };
   }
   if (!/^[a-z][a-z0-9_]{3,19}$/.test(loginId)) {
@@ -726,6 +732,9 @@ async function signupUser(formData) {
   }
   if (password.length < 8) {
     return { success: false, message: "비밀번호는 8자 이상 입력해 주세요." };
+  }
+  if (password !== passwordConfirm) {
+    return { success: false, message: "비밀번호와 비밀번호 확인이 일치하지 않습니다." };
   }
   if (!window.btlrSupabase) {
     return { success: false, message: "회원 서비스에 연결할 수 없습니다." };
@@ -945,7 +954,8 @@ async function borrowBook(bookId) {
   }
   const book = getBookById(bookId);
   if (!book) return { success: false, message: "도서 정보를 찾을 수 없습니다." };
-  if ((book.availableQuantity ?? (book.loanStatus === "대출 가능" ? 1 : 0)) < 1) {
+  const readyForUser = isBookReadyForCurrentUser(bookId);
+  if (!readyForUser && (book.availableQuantity ?? (book.loanStatus === "대출 가능" ? 1 : 0)) < 1) {
     return { success: false, message: "현재 바로 대출할 수 없는 도서입니다." };
   }
   if (isLoaned(bookId)) {
@@ -956,7 +966,12 @@ async function borrowBook(bookId) {
     target_book_id: bookId,
   });
   if (error) return { success: false, message: error.message };
-  await Promise.all([loadUserLoansFromSupabase(), loadBooksFromSupabase()]);
+  await Promise.all([
+    loadUserLoansFromSupabase(),
+    loadUserReservationsFromSupabase(),
+    loadBooksFromSupabase(),
+  ]);
+  await loadNotifications();
   return {
     success: true,
     message: `대출이 완료되었습니다. 반납 예정일은 ${formatDate(data?.dueAt)}입니다.`,
@@ -975,6 +990,7 @@ async function removeLoan(loanId) {
   });
   if (error) return { success: false, message: error.message };
   await Promise.all([loadUserLoansFromSupabase(), loadBooksFromSupabase()]);
+  await loadNotifications();
   return { success: true, message: "도서를 반납했습니다." };
 }
 
@@ -997,12 +1013,17 @@ async function loadUserReservationsFromSupabase() {
     return;
   }
 
-  const { data, error } = await window.btlrSupabase
-    .from("book_reservations")
-    .select("id, user_id, book_id, status, created_at")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .order("created_at", { ascending: false });
+  let { data, error } = await window.btlrSupabase.rpc("list_my_book_reservations");
+  if (error && /function|schema cache/i.test(error.message || "")) {
+    const fallback = await window.btlrSupabase
+      .from("book_reservations")
+      .select("id, user_id, book_id, status, created_at")
+      .eq("user_id", user.id)
+      .in("status", ["active", "ready"])
+      .order("created_at", { ascending: false });
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     reservationsCache = [];
@@ -1013,7 +1034,10 @@ async function loadUserReservationsFromSupabase() {
     id: reservation.id,
     userId: reservation.user_id,
     bookId: reservation.book_id,
-    reservationStatus: "예약 완료",
+    status: reservation.status,
+    reservationStatus: reservation.status === "ready" ? "대출 가능" : "예약 대기",
+    queuePosition: Number(reservation.queue_position) || 0,
+    readyAt: reservation.ready_at || null,
     createdAt: reservation.created_at,
   }));
 }
@@ -1043,11 +1067,12 @@ async function reserveBook(bookId) {
     target_book_id: bookId,
   });
   if (error) return { success: false, message: error.message };
-  await loadUserReservationsFromSupabase();
+  await Promise.all([loadUserReservationsFromSupabase(), loadBooksFromSupabase()]);
+  await loadNotifications();
   return {
     success: true,
     message:
-      "예약 신청이 완료되었습니다. 마이페이지에서 예약 현황을 확인할 수 있습니다.",
+      "예약 신청이 완료되었습니다. 앞선 예약자가 있으면 순서대로 알림을 보내드립니다.",
   };
 }
 
@@ -1065,7 +1090,8 @@ async function cancelReservation(reservationId) {
     target_reservation_id: reservationId,
   });
   if (error) return { success: false, message: error.message };
-  await loadUserReservationsFromSupabase();
+  await Promise.all([loadUserReservationsFromSupabase(), loadBooksFromSupabase()]);
+  await loadNotifications();
   return { success: true, message: "예약을 취소했습니다." };
 }
 
@@ -1078,6 +1104,21 @@ function isReserved(bookId) {
   );
 }
 
+function getReadyReservation(bookId) {
+  const user = getCurrentUser();
+  if (!user) return null;
+  return getReservations().find(
+    (reservation) =>
+      reservation.userId === user.id &&
+      reservation.bookId === bookId &&
+      reservation.status === "ready",
+  ) || null;
+}
+
+function isBookReadyForCurrentUser(bookId) {
+  return Boolean(getReadyReservation(bookId));
+}
+
 function renderAuthArea() {
   const user = getCurrentUser();
   document.body?.classList.toggle("has-admin-nav", user?.role === "admin");
@@ -1088,6 +1129,7 @@ function renderAuthArea() {
         : "";
       container.innerHTML = `
         ${adminLinks}
+        <button class="notification-toggle" type="button" data-notification-toggle aria-label="알림 열기" aria-expanded="false"><span aria-hidden="true">♢</span><b data-notification-count hidden>0</b></button>
         <a class="user-link" href="mypage.html" title="${escapeHTML(user.email)}">${escapeHTML(user.name)}님</a>
         <button class="logout-button" type="button" data-action="logout">로그아웃</button>
       `;
@@ -1159,6 +1201,289 @@ function renderAuthArea() {
   });
 
   updateAdminNavigationState();
+}
+
+function getSafeNotificationLink(value) {
+  const link = String(value || "").trim();
+  return /^(index|search|detail|reserve|mypage|admin|request|reading-room|inquiry)\.html(?:[?#].*)?$/.test(link)
+    ? link
+    : "mypage.html";
+}
+
+function getNotificationIcon(type) {
+  return {
+    book_ready: "B",
+    reading_room: "⌑",
+    loan_due: "↗",
+    favorite_available: "♡",
+    admin_inquiry: "✉",
+    admin_book_request: "+",
+    inquiry_answer: "↩",
+    book_request_result: "✓",
+  }[type] || "•";
+}
+
+function getNotificationPriority(type) {
+  return {
+    reading_room: 100,
+    book_ready: 90,
+    loan_due: 70,
+    admin_inquiry: 65,
+    admin_book_request: 60,
+    inquiry_answer: 55,
+    book_request_result: 50,
+    favorite_available: 30,
+  }[type] || 10;
+}
+
+function formatNotificationTime(value) {
+  if (!value) return "방금 전";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const differenceMinutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+  if (differenceMinutes < 1) return "방금 전";
+  if (differenceMinutes < 60) return `${differenceMinutes}분 전`;
+  if (differenceMinutes < 1440) return `${Math.floor(differenceMinutes / 60)}시간 전`;
+  return formatDate(value);
+}
+
+function ensureNotificationCenter() {
+  if (!document.getElementById("notification-panel")) {
+    const panel = document.createElement("aside");
+    panel.id = "notification-panel";
+    panel.className = "notification-panel";
+    panel.hidden = true;
+    panel.setAttribute("aria-label", "통합 알림");
+    panel.innerHTML = `
+      <div class="notification-panel-heading"><div><span>NOTIFICATIONS</span><h2>알림</h2></div><button type="button" data-notification-close aria-label="알림 닫기">×</button></div>
+      <div class="notification-list" id="notification-list"></div>
+      <button class="notification-read-all" type="button" data-notification-read-all>모두 읽음 처리</button>
+    `;
+    document.body.appendChild(panel);
+  }
+
+  if (!document.getElementById("notification-banner")) {
+    const banner = document.createElement("aside");
+    banner.id = "notification-banner";
+    banner.className = "notification-banner";
+    banner.hidden = true;
+    const header = document.querySelector(".site-header");
+    if (header) header.insertAdjacentElement("afterend", banner);
+  }
+}
+
+async function getVirtualNotifications() {
+  const user = getCurrentUser();
+  if (!user || user.role === "admin") return [];
+  const virtualNotifications = [];
+  const now = Date.now();
+
+  const dueLoan = getLoans()
+    .filter((loan) => loan.userId === user.id && new Date(loan.dueDate).getTime() > now)
+    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
+  if (dueLoan) {
+    const dueDifference = new Date(dueLoan.dueDate).getTime() - now;
+    if (dueDifference <= 3 * 24 * 60 * 60 * 1000) {
+      const book = getBookById(dueLoan.bookId);
+      virtualNotifications.push({
+        id: `loan-due-${dueLoan.id}`,
+        type: "loan_due",
+        title: "도서 반납일이 가까워요",
+        message: `${book?.title || "대출 도서"}의 반납 예정일은 ${formatDate(dueLoan.dueDate)}입니다.`,
+        link: "mypage.html#loans-section",
+        created_at: dueLoan.dueDate,
+        isVirtual: true,
+      });
+    }
+  }
+
+  const favoriteBook = getFavorites()
+    .filter((favorite) => favorite.userId === user.id)
+    .map((favorite) => getBookById(favorite.bookId))
+    .find((book) => book && book.availableQuantity > 0 && !isLoaned(book.id));
+  if (favoriteBook) {
+    virtualNotifications.push({
+      id: `favorite-available-${favoriteBook.id}`,
+      type: "favorite_available",
+      title: "찜한 도서를 빌릴 수 있어요",
+      message: `${favoriteBook.title}이(가) 현재 대출 가능합니다.`,
+      link: `detail.html?id=${encodeURIComponent(favoriteBook.id)}`,
+      created_at: new Date().toISOString(),
+      isVirtual: true,
+    });
+  }
+
+  if (window.btlrSupabase) {
+    const today = getLocalDateInputValue();
+    const { data } = await window.btlrSupabase
+      .from("reading_room_reservations")
+      .select("id, reservation_group_id, reservation_date, start_time, end_time, seat_number")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .gte("reservation_date", today)
+      .order("reservation_date", { ascending: true })
+      .order("start_time", { ascending: true });
+    const reservation = data?.[0];
+    if (reservation) {
+      const startAt = new Date(`${reservation.reservation_date}T${formatRoomTime(reservation.start_time)}:00+09:00`);
+      const minutesUntilStart = Math.ceil((startAt.getTime() - now) / 60000);
+      if (minutesUntilStart > 0 && minutesUntilStart <= 30) {
+        const sameGroupSeats = (data || [])
+          .filter((row) => row.reservation_group_id === reservation.reservation_group_id)
+          .map((row) => Number(row.seat_number))
+          .sort((a, b) => a - b);
+        virtualNotifications.push({
+          id: `room-soon-${reservation.reservation_group_id}`,
+          type: "reading_room",
+          title: "열람실 이용 시간이 곧 시작돼요",
+          message: `${minutesUntilStart}분 후 ${sameGroupSeats.map((seat) => `${seat}번`).join(", ")} 좌석 예약이 시작됩니다.`,
+          link: "mypage.html#reading-room-section",
+          created_at: new Date().toISOString(),
+          isVirtual: true,
+        });
+      }
+    }
+  }
+
+  const readVirtualIds = new Set(getStoredArray(`btlr_read_virtual_notifications_${user.id}`));
+  return virtualNotifications.map((notification) => ({
+    ...notification,
+    read_at: readVirtualIds.has(notification.id) ? notification.created_at : null,
+  }));
+}
+
+function renderNotificationCenter() {
+  ensureNotificationCenter();
+  const user = getCurrentUser();
+  const list = document.getElementById("notification-list");
+  const banner = document.getElementById("notification-banner");
+  if (!user || !list || !banner) return;
+
+  const sortedNotifications = [...notificationsCache].sort((a, b) => {
+    const priorityDifference = getNotificationPriority(b.type) - getNotificationPriority(a.type);
+    return priorityDifference || new Date(b.created_at) - new Date(a.created_at);
+  });
+  const unreadNotifications = sortedNotifications.filter((notification) => !notification.read_at);
+  document.querySelectorAll("[data-notification-count]").forEach((count) => {
+    count.textContent = unreadNotifications.length > 99 ? "99+" : String(unreadNotifications.length);
+    count.hidden = unreadNotifications.length === 0;
+  });
+
+  list.innerHTML = sortedNotifications.length
+    ? sortedNotifications.map((notification) => `
+      <a class="notification-item${notification.read_at ? " is-read" : ""}" href="${escapeHTML(getSafeNotificationLink(notification.link))}" data-notification-id="${escapeHTML(notification.id)}" data-notification-virtual="${notification.isVirtual ? "true" : "false"}">
+        <span class="notification-icon" aria-hidden="true">${escapeHTML(getNotificationIcon(notification.type))}</span>
+        <span><strong>${escapeHTML(notification.title)}</strong><small>${escapeHTML(notification.message)}</small><time>${escapeHTML(formatNotificationTime(notification.created_at))}</time></span>
+      </a>
+    `).join("")
+    : '<div class="notification-empty"><span>✓</span><strong>새로운 알림이 없습니다.</strong></div>';
+
+  const dismissedIds = new Set(JSON.parse(sessionStorage.getItem("btlr_dismissed_notifications") || "[]"));
+  const bannerNotification = unreadNotifications.find((notification) => !dismissedIds.has(notification.id));
+  if (bannerNotification) {
+    banner.hidden = false;
+    banner.innerHTML = `
+      <div class="shell notification-banner-inner"><span class="notification-icon" aria-hidden="true">${escapeHTML(getNotificationIcon(bannerNotification.type))}</span><div><strong>${escapeHTML(bannerNotification.title)}</strong><p>${escapeHTML(bannerNotification.message)}</p></div><a href="${escapeHTML(getSafeNotificationLink(bannerNotification.link))}" data-notification-id="${escapeHTML(bannerNotification.id)}" data-notification-virtual="${bannerNotification.isVirtual ? "true" : "false"}">확인하기</a><button type="button" data-notification-dismiss="${escapeHTML(bannerNotification.id)}" aria-label="알림 배너 닫기">×</button></div>
+    `;
+  } else {
+    banner.hidden = true;
+    banner.replaceChildren();
+  }
+}
+
+async function loadNotifications() {
+  const user = getCurrentUser();
+  if (!user || !window.btlrSupabase) return;
+  const [{ data, error }, virtualNotifications] = await Promise.all([
+    window.btlrSupabase
+      .from("notifications")
+      .select("id, user_id, type, title, message, link, read_at, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(30),
+    getVirtualNotifications(),
+  ]);
+  notificationsCache = [...(error ? [] : (data || [])), ...virtualNotifications];
+  renderNotificationCenter();
+}
+
+async function markNotificationRead(notificationId, isVirtual = false) {
+  if (!notificationId || !window.btlrSupabase) return;
+  if (isVirtual) {
+    const user = getCurrentUser();
+    const storageKey = `btlr_read_virtual_notifications_${user.id}`;
+    const readIds = new Set(getStoredArray(storageKey));
+    readIds.add(notificationId);
+    setStoredArray(storageKey, [...readIds].slice(-50));
+  } else {
+    await window.btlrSupabase.rpc("mark_notification_read", { target_notification_id: notificationId });
+  }
+  const notification = notificationsCache.find((item) => item.id === notificationId);
+  if (notification) notification.read_at = new Date().toISOString();
+  renderNotificationCenter();
+}
+
+async function initNotificationCenter() {
+  const user = getCurrentUser();
+  if (!user || !window.btlrSupabase) return;
+  ensureNotificationCenter();
+
+  if (!document.body.dataset.notificationEventsBound) {
+    document.body.dataset.notificationEventsBound = "true";
+    document.addEventListener("click", async (event) => {
+      const toggle = event.target.closest("[data-notification-toggle]");
+      const panel = document.getElementById("notification-panel");
+      if (toggle && panel) {
+        panel.hidden = !panel.hidden;
+        toggle.setAttribute("aria-expanded", String(!panel.hidden));
+        return;
+      }
+      if (event.target.closest("[data-notification-close]") && panel) {
+        panel.hidden = true;
+        document.querySelectorAll("[data-notification-toggle]").forEach((button) => button.setAttribute("aria-expanded", "false"));
+        return;
+      }
+      const dismiss = event.target.closest("[data-notification-dismiss]");
+      if (dismiss) {
+        const dismissed = new Set(JSON.parse(sessionStorage.getItem("btlr_dismissed_notifications") || "[]"));
+        dismissed.add(dismiss.dataset.notificationDismiss);
+        sessionStorage.setItem("btlr_dismissed_notifications", JSON.stringify([...dismissed]));
+        renderNotificationCenter();
+        return;
+      }
+      const notificationLink = event.target.closest("[data-notification-id]");
+      if (notificationLink) {
+        event.preventDefault();
+        await markNotificationRead(notificationLink.dataset.notificationId, notificationLink.dataset.notificationVirtual === "true");
+        window.location.href = getSafeNotificationLink(notificationLink.getAttribute("href"));
+        return;
+      }
+      if (event.target.closest("[data-notification-read-all]")) {
+        await window.btlrSupabase.rpc("mark_all_notifications_read");
+        const storageKey = `btlr_read_virtual_notifications_${user.id}`;
+        setStoredArray(storageKey, notificationsCache.filter((notification) => notification.isVirtual).map((notification) => notification.id));
+        notificationsCache.forEach((notification) => {
+          notification.read_at = new Date().toISOString();
+        });
+        renderNotificationCenter();
+      }
+    });
+  }
+
+  await loadNotifications();
+  window.clearInterval(notificationPollTimer);
+  notificationPollTimer = window.setInterval(loadNotifications, 60000);
+
+  if (notificationRealtimeChannel) await window.btlrSupabase.removeChannel(notificationRealtimeChannel);
+  notificationRealtimeChannel = window.btlrSupabase
+    .channel(`notifications-${user.id}`)
+    .on("postgres_changes", {
+      event: "INSERT",
+      schema: "public",
+      table: "notifications",
+      filter: `user_id=eq.${user.id}`,
+    }, loadNotifications)
+    .subscribe();
 }
 
 function updateAdminNavigationState() {
@@ -1448,12 +1773,13 @@ function initDetailPage() {
   document.title = `${book.title} | BOOK TO LEARN & RUN`;
   const favorite = isFavorite(book.id);
   const loaned = isLoaned(book.id);
+  const readyForUser = isBookReadyForCurrentUser(book.id);
   const actionButton = getCurrentUser()?.role === "admin"
     ? '<button class="button button-primary is-disabled" type="button" disabled>관리자 계정은 대출할 수 없습니다</button>'
     : loaned
       ? '<button class="button button-primary is-disabled" type="button" disabled>현재 대여 중</button>'
-    : (book.availableQuantity ?? (book.loanStatus === "대출 가능" ? 1 : 0)) > 0
-      ? `<button class="button button-primary" type="button" data-action="borrow" data-book-id="${book.id}">대출하기</button>`
+    : readyForUser || (book.availableQuantity ?? (book.loanStatus === "대출 가능" ? 1 : 0)) > 0
+      ? `<button class="button button-primary" type="button" data-action="borrow" data-book-id="${book.id}">${readyForUser ? "예약 도서 대출하기" : "대출하기"}</button>`
       : `<a class="button button-primary" href="reserve.html?id=${encodeURIComponent(book.id)}">예약 신청</a>`;
 
   container.innerHTML = `
@@ -1538,6 +1864,7 @@ function initReservePage() {
   }
 
   const alreadyReserved = isReserved(book.id);
+  const readyReservation = getReadyReservation(book.id);
   const loanedByUser = isLoaned(book.id);
   const isAdmin = getCurrentUser()?.role === "admin";
   const reservationLimitReached = getReservations().filter(
@@ -1575,6 +1902,9 @@ function initReservePage() {
             ? '<div class="available-guide">관리자 계정은 도서를 대출하거나 예약할 수 없습니다.</div>'
             : loanedByUser
             ? '<div class="available-guide">현재 본인이 대출 중인 도서입니다. 반납 후 다시 이용할 수 있습니다.</div><a class="button button-secondary button-full" href="mypage.html#loans-section" style="margin-top:8px">마이페이지에서 확인</a>'
+            : readyReservation
+            ? '<div class="available-guide">예약 순번이 도착했습니다. 확보된 도서를 지금 대출할 수 있습니다.</div>' +
+              `<button class="button button-primary button-full" type="button" data-action="borrow" data-book-id="${book.id}" style="margin-top:14px">예약 도서 대출하기</button>`
             : reservationLimitReached && !alreadyReserved && book.loanStatus !== "대출 가능"
             ? `<div class="available-guide">도서 예약은 최대 ${MAX_ACTIVE_BOOK_RESERVATIONS}권까지 가능합니다. 기존 예약을 취소한 뒤 다시 신청해 주세요.</div><a class="button button-secondary button-full" href="mypage.html#reservations-section" style="margin-top:8px">예약 내역 확인</a>`
             : canReserve
@@ -3507,12 +3837,33 @@ async function getInquirySignedImageUrl(imagePath) {
 }
 
 async function attachInquiryImageUrls(inquiries) {
-  return Promise.all((inquiries || []).map(async (inquiry) => ({
-    ...inquiry,
-    signedImageUrl: inquiry.can_view && inquiry.image_path
-      ? await getInquirySignedImageUrl(inquiry.image_path)
-      : "",
-  })));
+  return Promise.all((inquiries || []).map(async (inquiry) => {
+    const imagePaths = [...new Set([
+      ...(Array.isArray(inquiry.image_paths) ? inquiry.image_paths : []),
+      inquiry.image_path,
+    ].filter(Boolean))].slice(0, 10);
+    const signedImageUrls = inquiry.can_view
+      ? (await Promise.all(imagePaths.map(getInquirySignedImageUrl))).filter(Boolean)
+      : [];
+    return {
+      ...inquiry,
+      imagePaths,
+      signedImageUrls,
+      signedImageUrl: signedImageUrls[0] || "",
+    };
+  }));
+}
+
+function createInquiryImagesMarkup(inquiry) {
+  const imageUrls = Array.isArray(inquiry.signedImageUrls)
+    ? inquiry.signedImageUrls
+    : inquiry.signedImageUrl ? [inquiry.signedImageUrl] : [];
+  if (!imageUrls.length) return "";
+  return `<div class="inquiry-image-gallery">${imageUrls.map((url, index) => `
+    <button class="inquiry-image-button" type="button" data-inquiry-image="${escapeHTML(url)}" aria-label="문의 첨부 사진 ${index + 1} 크게 보기">
+      <img src="${escapeHTML(url)}" alt="문의 첨부 사진 ${index + 1}" loading="lazy" />
+    </button>
+  `).join("")}</div>`;
 }
 
 function createInquiryAnswerMarkup(inquiry, options = {}) {
@@ -3541,13 +3892,13 @@ function createPublicInquiryCard(inquiry) {
     bodyMarkup = `
       <details class="inquiry-private-detail">
         <summary>내 비밀 문의 내용 확인</summary>
-        <div class="inquiry-private-content"><strong>${escapeHTML(inquiry.title || "비밀 문의")}</strong><p>${inquiryTextMarkup(inquiry.content)}</p>${inquiry.signedImageUrl ? `<button class="inquiry-image-button" type="button" data-inquiry-image="${escapeHTML(inquiry.signedImageUrl)}" aria-label="문의 첨부 사진 크게 보기"><img src="${escapeHTML(inquiry.signedImageUrl)}" alt="문의 첨부 사진" /></button>` : ""}${createInquiryAnswerMarkup(inquiry)}</div>
+        <div class="inquiry-private-content"><strong>${escapeHTML(inquiry.title || "비밀 문의")}</strong><p>${inquiryTextMarkup(inquiry.content)}</p>${createInquiryImagesMarkup(inquiry)}${createInquiryAnswerMarkup(inquiry)}</div>
       </details>
     `;
   } else {
     bodyMarkup = `
       <p class="inquiry-content">${inquiryTextMarkup(inquiry.content)}</p>
-      ${inquiry.signedImageUrl ? `<button class="inquiry-image-button" type="button" data-inquiry-image="${escapeHTML(inquiry.signedImageUrl)}" aria-label="문의 첨부 사진 크게 보기"><img src="${escapeHTML(inquiry.signedImageUrl)}" alt="문의 첨부 사진" /></button>` : ""}
+      ${createInquiryImagesMarkup(inquiry)}
       ${createInquiryAnswerMarkup(inquiry)}
     `;
   }
@@ -3590,17 +3941,28 @@ function openInquiryImage(url) {
   dialog.showModal();
 }
 
-async function uploadInquiryImage(file, userId) {
-  if (!file) return { path: "" };
+async function uploadInquiryImages(files, userId) {
+  const selectedFiles = [...(files || [])];
+  if (!selectedFiles.length) return { paths: [] };
+  if (selectedFiles.length > 10) return { error: "사진은 최대 10장까지 첨부할 수 있습니다.", paths: [] };
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-  if (!allowedTypes.includes(file.type)) return { error: "사진은 JPG, PNG, WEBP 파일만 첨부할 수 있습니다." };
-  if (file.size > 5 * 1024 * 1024) return { error: "사진은 5MB 이하로 첨부해 주세요." };
   const extensionMap = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
-  const filePath = `${userId}/${Date.now()}-${window.crypto.randomUUID()}.${extensionMap[file.type]}`;
-  const { error } = await window.btlrSupabase.storage
-    .from("inquiry-images")
-    .upload(filePath, file, { contentType: file.type, upsert: false });
-  return error ? { error: error.message } : { path: filePath };
+  const uploadedPaths = [];
+  for (const file of selectedFiles) {
+    if (!allowedTypes.includes(file.type)) {
+      return { error: "사진은 JPG, PNG, WEBP 파일만 첨부할 수 있습니다.", paths: uploadedPaths };
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return { error: "사진은 한 장당 5MB 이하로 첨부해 주세요.", paths: uploadedPaths };
+    }
+    const filePath = `${userId}/${Date.now()}-${window.crypto.randomUUID()}.${extensionMap[file.type]}`;
+    const { error } = await window.btlrSupabase.storage
+      .from("inquiry-images")
+      .upload(filePath, file, { contentType: file.type, upsert: false });
+    if (error) return { error: error.message, paths: uploadedPaths };
+    uploadedPaths.push(filePath);
+  }
+  return { paths: uploadedPaths };
 }
 
 async function submitInquiry(event) {
@@ -3627,21 +3989,21 @@ async function submitInquiry(event) {
     submitButton.disabled = true;
     submitButton.textContent = "등록 중...";
   }
-  let uploadedPath = "";
+  let uploadedPaths = [];
   try {
-    const uploadResult = await uploadInquiryImage(form.elements.image?.files?.[0], user.id);
+    const uploadResult = await uploadInquiryImages(form.elements.images?.files, user.id);
+    uploadedPaths = uploadResult.paths || [];
     if (uploadResult.error) throw new Error(uploadResult.error);
-    uploadedPath = uploadResult.path;
     const { error } = await window.btlrSupabase.rpc("create_inquiry", {
       inquiry_title: title,
       inquiry_content: content,
       inquiry_is_secret: Boolean(form.elements.isSecret?.checked),
-      inquiry_image_path: uploadedPath || null,
+      inquiry_image_paths: uploadedPaths,
     });
     if (error) throw error;
     form.reset();
     document.getElementById("inquiry-character-count").textContent = "0";
-    document.getElementById("inquiry-image-preview").innerHTML = "<span>선택한 사진 미리보기</span>";
+    renderInquiryImagePreviews(document.getElementById("inquiry-image-preview"), []);
     if (message) {
       message.textContent = "문의를 등록했습니다.";
       message.classList.add("success");
@@ -3649,7 +4011,7 @@ async function submitInquiry(event) {
     showToast("문의를 등록했습니다.");
     await loadInquiryBoard();
   } catch (error) {
-    if (uploadedPath) await window.btlrSupabase.storage.from("inquiry-images").remove([uploadedPath]);
+    if (uploadedPaths.length) await window.btlrSupabase.storage.from("inquiry-images").remove(uploadedPaths);
     if (message) {
       message.textContent = error?.message || "문의를 등록하지 못했습니다.";
       message.classList.remove("success");
@@ -3661,6 +4023,16 @@ async function submitInquiry(event) {
       submitButton.textContent = "문의 등록";
     }
   }
+}
+
+function renderInquiryImagePreviews(preview, files) {
+  if (!preview) return;
+  (preview._objectUrls || []).forEach(URL.revokeObjectURL);
+  const selectedFiles = [...(files || [])].slice(0, 10);
+  preview._objectUrls = selectedFiles.map((file) => URL.createObjectURL(file));
+  preview.innerHTML = selectedFiles.length
+    ? preview._objectUrls.map((url, index) => `<figure><img src="${escapeHTML(url)}" alt="첨부할 사진 ${index + 1} 미리보기" /><figcaption>${index + 1}</figcaption></figure>`).join("")
+    : "<span>선택한 사진 미리보기</span>";
 }
 
 function initInquiryPage() {
@@ -3676,13 +4048,21 @@ function initInquiryPage() {
     form.elements.content?.addEventListener("input", () => {
       document.getElementById("inquiry-character-count").textContent = String(form.elements.content.value.length);
     });
-    form.elements.image?.addEventListener("change", () => {
-      const file = form.elements.image.files?.[0];
+    form.elements.images?.addEventListener("change", () => {
+      const files = [...(form.elements.images.files || [])];
       const preview = document.getElementById("inquiry-image-preview");
-      if (!preview) return;
-      preview.innerHTML = file
-        ? `<img src="${escapeHTML(URL.createObjectURL(file))}" alt="첨부할 사진 미리보기" />`
-        : "<span>선택한 사진 미리보기</span>";
+      const message = document.getElementById("inquiry-form-message");
+      if (files.length > 10) {
+        form.elements.images.value = "";
+        renderInquiryImagePreviews(preview, []);
+        if (message) {
+          message.textContent = "사진은 최대 10장까지 선택할 수 있습니다.";
+          message.classList.remove("success");
+        }
+        return;
+      }
+      renderInquiryImagePreviews(preview, files);
+      if (message) message.textContent = files.length ? `${files.length}장의 사진을 선택했습니다.` : "";
     });
   }
   document.getElementById("refresh-inquiries")?.addEventListener("click", loadInquiryBoard);
@@ -3712,7 +4092,7 @@ async function renderAdminInquiries() {
       <header><div><span class="inquiry-status ${inquiry.is_answered ? "is-answered" : ""}">${inquiry.is_answered ? "답변 완료" : "답변 대기"}</span><h3>${escapeHTML(inquiry.title || "제목 없음")}</h3></div>${inquiry.is_secret ? '<span class="admin-secret-badge">비밀글</span>' : '<span class="admin-public-badge">공개글</span>'}</header>
       <div class="inquiry-meta"><span>${escapeHTML(inquiry.author_name || "회원")} · ${escapeHTML(inquiry.author_email || "-")}</span><time>${formatDate(inquiry.created_at)}</time></div>
       <p class="inquiry-content">${inquiryTextMarkup(inquiry.content)}</p>
-      ${inquiry.signedImageUrl ? `<button class="inquiry-image-button" type="button" data-inquiry-image="${escapeHTML(inquiry.signedImageUrl)}"><img src="${escapeHTML(inquiry.signedImageUrl)}" alt="문의 첨부 사진" /></button>` : ""}
+      ${createInquiryImagesMarkup(inquiry)}
       <form class="admin-inquiry-answer-form" data-admin-inquiry-answer="${escapeHTML(inquiry.id)}">
         <label for="admin-answer-${escapeHTML(inquiry.id)}">관리자 답변</label>
         <textarea id="admin-answer-${escapeHTML(inquiry.id)}" name="answer" rows="4" maxlength="1000" required placeholder="답변 내용을 입력하세요">${escapeHTML(inquiry.answer || "")}</textarea>
@@ -4043,13 +4423,42 @@ async function updateMyPassword(event) {
   event.preventDefault();
   const form = event.currentTarget;
   const message = document.getElementById("profile-password-message");
-  const password = String(new FormData(form).get("password") || "");
+  const formData = new FormData(form);
+  const currentPassword = String(formData.get("currentPassword") || "");
+  const password = String(formData.get("password") || "");
+  const passwordConfirm = String(formData.get("passwordConfirm") || "");
+  if (!currentPassword) {
+    if (message) message.textContent = "현재 비밀번호를 입력해 주세요.";
+    return;
+  }
   if (password.length < 8) {
     if (message) message.textContent = "새 비밀번호는 8자 이상 입력해 주세요.";
     return;
   }
+  if (password !== passwordConfirm) {
+    if (message) message.textContent = "새 비밀번호와 비밀번호 확인이 일치하지 않습니다.";
+    return;
+  }
+  if (currentPassword === password) {
+    if (message) message.textContent = "새 비밀번호는 현재 비밀번호와 다르게 입력해 주세요.";
+    return;
+  }
   const button = form.querySelector('button[type="submit"]');
   if (button) button.disabled = true;
+  if (message) {
+    message.textContent = "현재 비밀번호를 확인하고 있습니다...";
+    message.classList.remove("success");
+  }
+  const user = getCurrentUser();
+  const { error: verifyError } = await window.btlrSupabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+  if (verifyError) {
+    if (button) button.disabled = false;
+    if (message) message.textContent = "현재 비밀번호가 올바르지 않습니다.";
+    return;
+  }
   const { error } = await window.btlrSupabase.auth.updateUser({ password });
   if (button) button.disabled = false;
   if (message) {
@@ -4104,9 +4513,9 @@ function renderMyList(containerId, records, type, emptyTitle, emptyText) {
         },
         reservation: {
           status: record.reservationStatus,
-          statusClass: "status-reserved",
-          dateLabel: "신청일",
-          date: record.createdAt,
+          statusClass: record.status === "ready" ? "status-available" : "status-reserved",
+          dateLabel: record.status === "ready" ? "대출 가능 전환" : record.queuePosition ? `대기 순번 ${record.queuePosition}번 · 신청일` : "신청일",
+          date: record.status === "ready" ? record.readyAt : record.createdAt,
           action: "cancel-reservation",
           actionText: "예약 취소",
         },

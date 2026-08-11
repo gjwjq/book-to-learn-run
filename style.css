@@ -424,6 +424,94 @@
   font-size: 0.68rem;
 }
 
+.inquiry-owner-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.inquiry-owner-actions .button {
+  min-height: 38px;
+  padding: 7px 14px;
+}
+
+.inquiry-edit-dialog {
+  width: min(92vw, 620px);
+  max-height: 90vh;
+  padding: 0;
+  overflow: auto;
+  background: #fff;
+  border: 0;
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(30, 20, 14, 0.35);
+}
+
+.inquiry-edit-dialog::backdrop {
+  background: rgba(31, 23, 19, 0.68);
+  backdrop-filter: blur(4px);
+}
+
+.inquiry-edit-form {
+  display: grid;
+  gap: 17px;
+  padding: 28px;
+}
+
+.inquiry-edit-form > div:not(.inquiry-edit-heading):not(.inquiry-edit-actions) {
+  display: grid;
+  gap: 7px;
+}
+
+.inquiry-edit-form label {
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.inquiry-edit-form input[type="text"],
+.inquiry-edit-form textarea {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fff;
+  font: inherit;
+}
+
+.inquiry-edit-heading,
+.inquiry-edit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.inquiry-edit-heading h2 {
+  margin-top: 3px;
+}
+
+.inquiry-edit-heading > button {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  color: var(--brown);
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  font-size: 1.6rem;
+}
+
+.inquiry-edit-actions {
+  justify-content: flex-start;
+}
+
+.inquiry-edit-note {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
 .admin-inquiry-answer-form {
   display: grid;
   gap: 9px;
@@ -1108,55 +1196,111 @@ img {
   color: #fff;
 }
 
-.nav-inner .admin-nav-link {
+.admin-nav-menu {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+}
+
+.admin-nav-toggle {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
-  padding: 0 5px;
-  color: #eaddd2;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  font-weight: 720;
-  box-shadow: none;
-  transition: color 0.2s ease;
+  padding: 0 14px;
+  color: #f8eee5;
+  background: rgb(255 255 255 / 10%);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.nav-inner .admin-nav-link:hover,
-.nav-inner .admin-nav-link.active {
-  color: #ffd9bd;
-  background: transparent;
-  transform: none;
+.admin-nav-toggle:hover,
+.admin-nav-toggle.active,
+.admin-nav-toggle[aria-expanded="true"] {
+  color: #fff;
+  background: rgb(219 130 71 / 24%);
+  border-color: rgb(255 190 147 / 42%);
 }
 
-.nav-inner .admin-nav-link::after {
-  display: block;
-  background: #db8247;
+.admin-nav-toggle > span {
+  font-size: 0.92rem;
 }
 
-.nav-inner .admin-nav-first {
-  margin-left: 12px;
-  padding-left: 28px;
+.admin-nav-toggle > i {
+  font-style: normal;
+  transition: transform 0.2s ease;
 }
 
-.nav-inner .admin-nav-first::before {
-  width: 1px;
-  height: 22px;
-  position: absolute;
-  left: 3px;
-  content: "";
-  background: rgb(255 255 255 / 22%);
+.admin-nav-toggle[aria-expanded="true"] > i {
+  transform: rotate(180deg);
 }
 
-.admin-nav-link span {
-  width: 26px;
-  height: 26px;
-  display: inline-grid;
+.admin-nav-dropdown {
+  position: fixed;
+  z-index: 260;
+  display: grid;
+  gap: 5px;
+  padding: 9px;
+  color: var(--ink);
+  background: rgba(255, 253, 249, 0.98);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 18px 45px rgba(35, 22, 15, 0.24);
+  backdrop-filter: blur(14px);
+}
+
+.admin-nav-dropdown[hidden] {
+  display: none;
+}
+
+.nav-inner .admin-nav-dropdown a {
+  height: auto;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  color: var(--brown);
+  border-radius: 10px;
+}
+
+.nav-inner .admin-nav-dropdown a::after {
+  display: none;
+}
+
+.nav-inner .admin-nav-dropdown a:hover,
+.nav-inner .admin-nav-dropdown a.active {
+  color: var(--brown);
+  background: var(--cream);
+}
+
+.admin-nav-dropdown a > span:first-child {
+  width: 34px;
+  height: 34px;
+  display: grid;
   place-items: center;
-  border: 1px solid rgb(255 255 255 / 20%);
-  border-radius: 6px;
-  color: #f4decd;
-  background: rgb(255 255 255 / 8%);
+  color: var(--orange);
+  background: #f8eee5;
+  border-radius: 9px;
+}
+
+.admin-nav-dropdown a > span:last-child {
+  display: grid;
+  gap: 1px;
+}
+
+.admin-nav-dropdown strong {
   font-size: 0.78rem;
-  line-height: 1;
+}
+
+.admin-nav-dropdown small {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 500;
 }
 
 .nav-message {
@@ -3085,11 +3229,38 @@ img {
   }
 
   .brand-copy strong {
-    font-size: 0.8rem;
+    font-size: 0.72rem;
+    white-space: nowrap;
   }
 
   .brand-copy small {
-    font-size: 0.5rem;
+    font-size: 0.46rem;
+    white-space: nowrap;
+  }
+
+  .brand {
+    min-width: 0;
+    gap: 9px;
+  }
+
+  .brand-mark {
+    flex: 0 0 auto;
+  }
+
+  .brand-copy {
+    min-width: 0;
+  }
+
+  .auth-area {
+    flex-wrap: nowrap;
+  }
+
+  .auth-area a,
+  .auth-area button {
+    flex: 0 0 auto;
+    padding-inline: 9px;
+    font-size: 0.7rem;
+    white-space: nowrap;
   }
 
   .nav-inner {
@@ -3229,30 +3400,48 @@ img {
   }
 
   .header-inner {
+    width: min(calc(100% - 20px), var(--shell));
     grid-template-columns: 1fr auto;
-    gap: 13px;
+    gap: 9px;
+    padding-block: 10px;
   }
 
   .brand-mark {
-    width: 40px;
-    height: 40px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .brand-mark::before {
+    width: 15px;
+    height: 19px;
+  }
+
+  .brand-mark::after {
+    width: 8px;
   }
 
   .brand-copy strong {
-    max-width: 145px;
-    font-size: 0.69rem;
+    max-width: none;
+    font-size: 0.58rem;
+    letter-spacing: -0.035em;
+  }
+
+  .brand-copy small {
+    margin-top: 3px;
+    font-size: 0.4rem;
+    letter-spacing: 0.045em;
   }
 
   .auth-area {
     min-width: 0;
-    gap: 3px;
+    gap: 2px;
   }
 
   .auth-area a,
   .auth-area button {
-    min-height: 36px;
-    padding-inline: 9px;
-    font-size: 0.68rem;
+    min-height: 32px;
+    padding-inline: 6px;
+    font-size: 0.58rem;
   }
 
   .auth-area .signup-link {
@@ -3260,13 +3449,29 @@ img {
   }
 
   .auth-area .user-link {
-    max-width: 82px;
+    max-width: 64px;
+    padding-inline: 7px;
   }
 
   .auth-area .logout-button {
     display: inline-flex;
-    padding-inline: 7px;
-    font-size: 0.64rem;
+    padding-inline: 5px;
+    font-size: 0.56rem;
+  }
+
+  .auth-area .notification-toggle {
+    width: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 0.9rem;
+  }
+
+  .notification-toggle b {
+    min-width: 16px;
+    height: 16px;
+    top: -4px;
+    right: -4px;
+    font-size: 0.48rem;
   }
 
   .header-search {
@@ -3279,8 +3484,9 @@ img {
   }
 
   .header-search button {
-    min-width: 48px;
-    padding-inline: 12px;
+    min-width: 44px;
+    padding-inline: 10px;
+    font-size: 0.7rem;
   }
 
   .search-text {
@@ -3296,6 +3502,22 @@ img {
   .nav-inner a {
     padding-inline: 12px;
     font-size: 0.76rem;
+  }
+
+  .admin-nav-menu {
+    margin-left: 0;
+    flex: 0 0 auto;
+  }
+
+  .admin-nav-toggle {
+    height: 34px;
+    gap: 5px;
+    padding-inline: 9px;
+    font-size: 0.66rem;
+  }
+
+  .admin-nav-toggle > span {
+    font-size: 0.75rem;
   }
 
   .hero-grid {
@@ -4069,6 +4291,15 @@ img {
   background: #fff;
 }
 
+.my-request-card.has-action {
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+}
+
+.request-cancel-button {
+  min-height: 38px;
+  padding: 7px 13px;
+}
+
 .my-request-cover {
   width: 52px;
   height: 70px;
@@ -4123,6 +4354,11 @@ img {
 .status-rejected {
   color: #a33f37;
   background: #f8e2df;
+}
+
+.status-cancelled {
+  color: #625b55;
+  background: #ece9e5;
 }
 
 .request-empty {
@@ -5421,6 +5657,15 @@ img {
 
   .admin-request-card .admin-row-actions {
     grid-column: 1 / -1;
+  }
+
+  .my-request-card.has-action {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .my-request-card.has-action .request-cancel-button {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
   .account-settings {

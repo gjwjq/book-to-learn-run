@@ -289,6 +289,7 @@ let readingRoomReservationsCache = [];
 let adminBookImportResults = [];
 let userBookSearchResults = [];
 let myBookRequestsCache = [];
+let inquiriesCache = [];
 let adminUsersCache = [];
 let notificationsCache = [];
 let notificationPollTimer = null;
@@ -373,6 +374,7 @@ async function initApp() {
   ]);
   handleHeaderSearch();
   renderAuthArea();
+  initAdminNavigationMenu();
   handleGlobalActions();
   initNotificationCenter();
 
@@ -465,14 +467,6 @@ function setStoredArray(key, value) {
 function getCurrentRelativeUrl() {
   const fileName = window.location.pathname.split("/").pop() || "index.html";
   return `${fileName}${window.location.search}${window.location.hash}`;
-}
-
-function getSafeNextUrl() {
-  const next = getQueryParam("next");
-  if (!next) return "mypage.html";
-  return /^(index|search|detail|reserve|mypage|admin|request|reading-room|inquiry)\.html(?:[?#].*)?$/.test(next)
-    ? next
-    : "mypage.html";
 }
 
 function getStatusClass(status) {
@@ -1124,11 +1118,7 @@ function renderAuthArea() {
   document.body?.classList.toggle("has-admin-nav", user?.role === "admin");
   document.querySelectorAll("[data-auth-area]").forEach((container) => {
     if (user) {
-      const adminLinks = user.role === "admin"
-        ? '<a class="admin-link" href="admin.html#users">유저 관리</a><a class="admin-link" href="admin.html#books">도서 관리</a>'
-        : "";
       container.innerHTML = `
-        ${adminLinks}
         <button class="notification-toggle" type="button" data-notification-toggle aria-label="알림 열기" aria-expanded="false"><span aria-hidden="true">♢</span><b data-notification-count hidden>0</b></button>
         <a class="user-link" href="mypage.html" title="${escapeHTML(user.email)}">${escapeHTML(user.name)}님</a>
         <button class="logout-button" type="button" data-action="logout">로그아웃</button>
@@ -1184,20 +1174,36 @@ function renderAuthArea() {
     ];
 
     if (user?.role === "admin") {
-      adminNavigationItems.forEach((item, index) => {
-        let link = navigation.querySelector(`[data-admin-nav="${item.section}"]`);
-        if (!link) {
-          link = document.createElement("a");
-          link.dataset.adminNav = item.section;
-          link.className = `admin-nav-link${index === 0 ? " admin-nav-first" : ""}`;
-          link.href = item.href;
-          link.innerHTML = `<span aria-hidden="true">${item.icon}</span>${item.label}`;
-          navigation.insertBefore(link, navigation.querySelector(".nav-message"));
-        }
-      });
+      navigation.querySelectorAll(":scope > .admin-nav-link").forEach((link) => link.remove());
+      let adminMenu = navigation.querySelector(".admin-nav-menu");
+      if (!adminMenu) {
+        adminMenu = document.createElement("div");
+        adminMenu.className = "admin-nav-menu";
+        adminMenu.innerHTML = `
+          <button class="admin-nav-toggle" type="button" data-admin-nav-toggle aria-expanded="false">
+            <span aria-hidden="true">▦</span><strong>관리페이지</strong><i aria-hidden="true">⌄</i>
+          </button>
+          <div class="admin-nav-dropdown" data-admin-nav-dropdown hidden>
+            ${adminNavigationItems.map((item) => `<a href="${item.href}" data-admin-nav="${item.section}"><span aria-hidden="true">${item.icon}</span><span><strong>${item.label}</strong><small>${item.section === "users" ? "회원 정보와 권한" : item.section === "books" ? "도서·요청·재고" : item.section === "room-reservations" ? "좌석 예약 현황" : "문의와 답변"}</small></span></a>`).join("")}
+          </div>
+        `;
+      }
+      navigation.insertBefore(adminMenu, navigation.querySelector(".nav-message"));
     } else {
-      navigation.querySelectorAll(".admin-nav-link").forEach((link) => link.remove());
+      navigation.querySelectorAll(".admin-nav-link, .admin-nav-menu").forEach((item) => item.remove());
     }
+
+    // 페이지마다 원래 작성된 링크 순서가 달라도 헤더 메뉴는 항상 같은 자리에 둡니다.
+    [
+      navigation.querySelector('a[href="index.html"]'),
+      navigation.querySelector('a[href="search.html"]'),
+      navigation.querySelector(".reading-room-nav-link"),
+      navigation.querySelector(".inquiry-nav-link"),
+      navigation.querySelector(".request-nav-link"),
+      navigation.querySelector('a[href="mypage.html"]'),
+      navigation.querySelector(".admin-nav-menu"),
+      navigation.querySelector(".nav-message"),
+    ].filter(Boolean).forEach((item) => navigation.append(item));
   });
 
   updateAdminNavigationState();
@@ -1495,9 +1501,56 @@ function updateAdminNavigationState() {
   document.querySelectorAll("[data-admin-nav]").forEach((link) => {
     link.classList.toggle("active", link.dataset.adminNav === activeSection);
   });
+  document.querySelectorAll("[data-admin-nav-toggle]").forEach((button) => {
+    button.classList.toggle("active", Boolean(activeSection));
+  });
 }
 
-window.addEventListener("hashchange", updateAdminNavigationState);
+function closeAdminNavigationMenus() {
+  document.querySelectorAll("[data-admin-nav-dropdown]").forEach((dropdown) => {
+    dropdown.hidden = true;
+    dropdown.removeAttribute("style");
+  });
+  document.querySelectorAll("[data-admin-nav-toggle]").forEach((button) => {
+    button.setAttribute("aria-expanded", "false");
+  });
+}
+
+function initAdminNavigationMenu() {
+  document.addEventListener("click", (event) => {
+    const toggle = event.target.closest("[data-admin-nav-toggle]");
+    if (toggle) {
+      const dropdown = toggle.closest(".admin-nav-menu")?.querySelector("[data-admin-nav-dropdown]");
+      if (!dropdown) return;
+      const shouldOpen = dropdown.hidden;
+      closeAdminNavigationMenus();
+      if (shouldOpen) {
+        const rect = toggle.getBoundingClientRect();
+        const dropdownWidth = Math.min(230, window.innerWidth - 24);
+        dropdown.style.width = `${dropdownWidth}px`;
+        dropdown.style.left = `${Math.min(Math.max(12, rect.left), window.innerWidth - dropdownWidth - 12)}px`;
+        dropdown.style.top = `${rect.bottom + 8}px`;
+        dropdown.hidden = false;
+        toggle.setAttribute("aria-expanded", "true");
+      }
+      return;
+    }
+    if (event.target.closest("[data-admin-nav]")) {
+      closeAdminNavigationMenus();
+      return;
+    }
+    if (!event.target.closest(".admin-nav-menu")) closeAdminNavigationMenus();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeAdminNavigationMenus();
+  });
+  window.addEventListener("resize", closeAdminNavigationMenus);
+}
+
+window.addEventListener("hashchange", () => {
+  closeAdminNavigationMenus();
+  updateAdminNavigationState();
+});
 
 function handleGlobalActions() {
   document.addEventListener("click", async (event) => {
@@ -1977,7 +2030,7 @@ function initSignupPage() {
 
 function initLoginPage() {
   if (getCurrentUser()) {
-    window.location.href = getSafeNextUrl();
+    window.location.href = "index.html";
     return;
   }
 
@@ -2011,7 +2064,7 @@ function initLoginPage() {
     }
     if (result.success) {
       window.setTimeout(() => {
-        window.location.href = getSafeNextUrl();
+        window.location.href = "index.html";
       }, 450);
     }
   });
@@ -3902,11 +3955,18 @@ function createPublicInquiryCard(inquiry) {
       ${createInquiryAnswerMarkup(inquiry)}
     `;
   }
+  const ownerActions = inquiry.is_owner && !inquiry.is_answered
+    ? `<div class="inquiry-owner-actions">
+        <button class="button button-secondary" type="button" data-edit-inquiry="${escapeHTML(inquiry.id)}">수정</button>
+        <button class="button button-danger" type="button" data-delete-inquiry="${escapeHTML(inquiry.id)}">삭제</button>
+      </div>`
+    : "";
   return `
     <article class="inquiry-card${secret ? " is-secret" : ""}">
       <header><div><span class="inquiry-status ${inquiry.is_answered ? "is-answered" : ""}">${inquiry.is_answered ? "답변 완료" : "답변 대기"}</span><h3>${escapeHTML(publicTitle)}</h3></div>${secret ? '<span class="inquiry-lock" aria-label="비밀글">🔒</span>' : ""}</header>
       <div class="inquiry-meta"><span>${escapeHTML(publicAuthor)}</span><time>${formatDate(inquiry.created_at)}</time></div>
       ${bodyMarkup}
+      ${ownerActions}
     </article>
   `;
 }
@@ -3921,11 +3981,79 @@ async function loadInquiryBoard() {
     return;
   }
   const inquiries = await attachInquiryImageUrls(data || []);
+  inquiriesCache = inquiries;
   if (!inquiries.length) {
     target.innerHTML = '<div class="request-empty"><span>✉</span><strong>등록된 문의가 없습니다.</strong><p>첫 번째 문의를 남겨 보세요.</p></div>';
     return;
   }
   target.innerHTML = inquiries.map(createPublicInquiryCard).join("");
+}
+
+function openInquiryEditDialog(inquiryId) {
+  const inquiry = inquiriesCache.find((item) => item.id === inquiryId);
+  const dialog = document.getElementById("inquiry-edit-dialog");
+  const form = document.getElementById("inquiry-edit-form");
+  if (!inquiry || !inquiry.is_owner || inquiry.is_answered || !dialog || !form) return;
+  form.dataset.inquiryId = inquiry.id;
+  form.elements.title.value = inquiry.title || "";
+  form.elements.content.value = inquiry.content || "";
+  form.elements.isSecret.checked = Boolean(inquiry.is_secret);
+  document.getElementById("inquiry-edit-character-count").textContent = String(form.elements.content.value.length);
+  document.getElementById("inquiry-edit-message").textContent = "";
+  dialog.showModal();
+  form.elements.title.focus();
+}
+
+async function submitInquiryEdit(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (form.dataset.submitting === "true" || !form.reportValidity()) return;
+  const title = String(form.elements.title.value || "").trim();
+  const content = String(form.elements.content.value || "").trim();
+  const message = document.getElementById("inquiry-edit-message");
+  if (!title || title.length > 100 || !content || content.length > 1000) {
+    message.textContent = "제목과 1000자 이내의 문의 내용을 확인해 주세요.";
+    return;
+  }
+  const submitButton = form.querySelector('button[type="submit"]');
+  form.dataset.submitting = "true";
+  submitButton.disabled = true;
+  submitButton.textContent = "저장 중...";
+  const { error } = await window.btlrSupabase.rpc("update_my_inquiry", {
+    target_inquiry_id: form.dataset.inquiryId,
+    next_title: title,
+    next_content: content,
+    next_is_secret: Boolean(form.elements.isSecret.checked),
+  });
+  delete form.dataset.submitting;
+  submitButton.disabled = false;
+  submitButton.textContent = "저장";
+  if (error) {
+    message.textContent = error.message;
+    return;
+  }
+  document.getElementById("inquiry-edit-dialog")?.close();
+  showToast("문의를 수정했습니다.");
+  await loadInquiryBoard();
+}
+
+async function deleteMyInquiry(inquiryId) {
+  const inquiry = inquiriesCache.find((item) => item.id === inquiryId);
+  if (!inquiry?.is_owner || inquiry.is_answered) return;
+  if (!window.confirm("이 문의를 삭제할까요? 삭제한 문의는 복구할 수 없습니다.")) return;
+  const { data, error } = await window.btlrSupabase.rpc("delete_my_inquiry", {
+    target_inquiry_id: inquiryId,
+  });
+  if (error) {
+    showToast(error.message);
+    return;
+  }
+  const imagePaths = Array.isArray(data) ? data.filter(Boolean) : [];
+  if (imagePaths.length) {
+    await window.btlrSupabase.storage.from("inquiry-images").remove(imagePaths);
+  }
+  showToast("문의를 삭제했습니다.");
+  await loadInquiryBoard();
 }
 
 function openInquiryImage(url) {
@@ -4066,9 +4194,30 @@ function initInquiryPage() {
     });
   }
   document.getElementById("refresh-inquiries")?.addEventListener("click", loadInquiryBoard);
+  const editDialog = document.getElementById("inquiry-edit-dialog");
+  const editForm = document.getElementById("inquiry-edit-form");
+  editForm?.addEventListener("submit", submitInquiryEdit);
+  editForm?.elements.content?.addEventListener("input", () => {
+    document.getElementById("inquiry-edit-character-count").textContent = String(editForm.elements.content.value.length);
+  });
+  document.getElementById("cancel-inquiry-edit")?.addEventListener("click", () => editDialog?.close());
+  document.getElementById("cancel-inquiry-edit-bottom")?.addEventListener("click", () => editDialog?.close());
+  editDialog?.addEventListener("click", (event) => {
+    if (event.target === editDialog) editDialog.close();
+  });
   document.getElementById("inquiry-list")?.addEventListener("click", (event) => {
     const imageButton = event.target.closest("[data-inquiry-image]");
-    if (imageButton) openInquiryImage(imageButton.dataset.inquiryImage);
+    if (imageButton) {
+      openInquiryImage(imageButton.dataset.inquiryImage);
+      return;
+    }
+    const editButton = event.target.closest("[data-edit-inquiry]");
+    if (editButton) {
+      openInquiryEditDialog(editButton.dataset.editInquiry);
+      return;
+    }
+    const deleteButton = event.target.closest("[data-delete-inquiry]");
+    if (deleteButton) deleteMyInquiry(deleteButton.dataset.deleteInquiry);
   });
   loadInquiryBoard();
 }
@@ -4151,6 +4300,7 @@ async function initBookRequestPage() {
   form?.addEventListener("submit", searchBooksForUserRequest);
   document.getElementById("user-book-search-results")?.addEventListener("click", submitUserBookRequest);
   document.getElementById("refresh-my-requests")?.addEventListener("click", loadMyBookRequests);
+  document.getElementById("my-book-request-list")?.addEventListener("click", cancelMyBookRequest);
   await loadMyBookRequests();
 }
 
@@ -4307,9 +4457,10 @@ function renderMyBookRequests() {
     pending: "승인 대기",
     approved: "추가 완료",
     rejected: "요청 거절",
+    cancelled: "요청 취소",
   };
   target.innerHTML = myBookRequestsCache.map((request) => `
-    <article class="my-request-card">
+    <article class="my-request-card${request.status === "pending" ? " has-action" : ""}">
       <div class="my-request-cover">
         ${request.thumbnail
           ? `<img src="${escapeHTML(request.thumbnail)}" alt="" />`
@@ -4321,8 +4472,29 @@ function renderMyBookRequests() {
         <p>${escapeHTML(request.author)}${request.publisher ? ` · ${escapeHTML(request.publisher)}` : ""}</p>
         <small>요청일 ${formatDate(request.requested_at)}</small>
       </div>
+      ${request.status === "pending" ? `<button class="button button-danger request-cancel-button" type="button" data-cancel-book-request="${escapeHTML(request.id)}">요청 취소</button>` : ""}
     </article>
   `).join("");
+}
+
+async function cancelMyBookRequest(event) {
+  const button = event.target.closest("[data-cancel-book-request]");
+  if (!button || button.disabled) return;
+  if (!window.confirm("이 도서 추가 요청을 취소할까요?")) return;
+  button.disabled = true;
+  button.textContent = "취소 중...";
+  const { error } = await window.btlrSupabase.rpc("cancel_my_book_request", {
+    target_request_id: button.dataset.cancelBookRequest,
+  });
+  if (error) {
+    button.disabled = false;
+    button.textContent = "요청 취소";
+    showToast(error.message);
+    return;
+  }
+  showToast("도서 추가 요청을 취소했습니다.");
+  await loadMyBookRequests();
+  renderUserBookSearchResults();
 }
 
 function initMyPage() {

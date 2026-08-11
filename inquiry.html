@@ -46,6 +46,17 @@
     </main>
 
     <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Run&amp;Learn</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
+    <dialog id="inquiry-edit-dialog" class="inquiry-edit-dialog" aria-labelledby="inquiry-edit-title">
+      <form id="inquiry-edit-form" class="inquiry-edit-form">
+        <div class="inquiry-edit-heading"><div><p class="eyebrow">EDIT INQUIRY</p><h2 id="inquiry-edit-title">문의 수정</h2></div><button id="cancel-inquiry-edit" type="button" aria-label="닫기">×</button></div>
+        <div><label for="inquiry-edit-title-input">제목</label><input id="inquiry-edit-title-input" name="title" type="text" maxlength="100" required /></div>
+        <div><label for="inquiry-edit-content">문의 내용</label><textarea id="inquiry-edit-content" name="content" rows="8" maxlength="1000" required></textarea><p class="inquiry-character-count"><span id="inquiry-edit-character-count">0</span> / 1000자</p></div>
+        <label class="inquiry-secret-option"><input name="isSecret" type="checkbox" /><span><strong>비밀글로 설정</strong><small>비밀글은 작성자와 관리자만 내용을 확인할 수 있습니다.</small></span></label>
+        <p class="inquiry-edit-note">기존 첨부 사진은 그대로 유지됩니다.</p>
+        <div class="inquiry-edit-actions"><button class="button button-primary" type="submit">저장</button><button class="button button-secondary" id="cancel-inquiry-edit-bottom" type="button">취소</button></div>
+        <p id="inquiry-edit-message" class="form-message" role="alert"></p>
+      </form>
+    </dialog>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>
 </html>

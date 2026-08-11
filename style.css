@@ -264,6 +264,18 @@
   background: linear-gradient(135deg, #fff 0, #fbf7f0 100%);
 }
 
+.my-pending-inquiry-panel {
+  margin-bottom: 28px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--line);
+}
+
+.my-pending-inquiry-note {
+  margin: -8px 0 16px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
 .inquiry-card > header,
 .admin-inquiry-card > header {
   display: flex;
@@ -313,6 +325,20 @@
   place-items: center;
   background: var(--cream);
   border-radius: 50%;
+}
+
+.admin-inquiry-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-inquiry-header-actions .button {
+  min-height: 34px;
+  padding: 6px 11px;
+  font-size: 0.72rem;
 }
 
 .inquiry-meta {
@@ -605,6 +631,16 @@
   .admin-inquiry-answer-form > div {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .admin-inquiry-card > header,
+  .admin-inquiry-header-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-inquiry-header-actions .button {
+    width: 100%;
   }
 
   .inquiry-board-heading .button,

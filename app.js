@@ -3973,6 +3973,8 @@ function createPublicInquiryCard(inquiry) {
 
 async function loadInquiryBoard() {
   const target = document.getElementById("inquiry-list");
+  const pendingPanel = document.getElementById("my-pending-inquiry-panel");
+  const pendingTarget = document.getElementById("my-pending-inquiry-list");
   if (!target || !window.btlrSupabase) return;
   target.innerHTML = '<p class="request-loading">문의 게시판을 불러오는 중...</p>';
   const { data, error } = await window.btlrSupabase.rpc("list_inquiries");
@@ -3982,11 +3984,15 @@ async function loadInquiryBoard() {
   }
   const inquiries = await attachInquiryImageUrls(data || []);
   inquiriesCache = inquiries;
-  if (!inquiries.length) {
-    target.innerHTML = '<div class="request-empty"><span>✉</span><strong>등록된 문의가 없습니다.</strong><p>첫 번째 문의를 남겨 보세요.</p></div>';
-    return;
+  const answeredInquiries = inquiries.filter((inquiry) => inquiry.is_answered);
+  const myPendingInquiries = inquiries.filter((inquiry) => inquiry.is_owner && !inquiry.is_answered);
+  if (pendingPanel && pendingTarget) {
+    pendingPanel.hidden = myPendingInquiries.length === 0;
+    pendingTarget.innerHTML = myPendingInquiries.map(createPublicInquiryCard).join("");
   }
-  target.innerHTML = inquiries.map(createPublicInquiryCard).join("");
+  target.innerHTML = answeredInquiries.length
+    ? answeredInquiries.map(createPublicInquiryCard).join("")
+    : '<div class="request-empty"><span>✉</span><strong>아직 공개된 문의 답변이 없습니다.</strong><p>관리자 답변이 등록된 문의만 이 게시판에 표시됩니다.</p></div>';
 }
 
 function openInquiryEditDialog(inquiryId) {
@@ -4219,6 +4225,20 @@ function initInquiryPage() {
     const deleteButton = event.target.closest("[data-delete-inquiry]");
     if (deleteButton) deleteMyInquiry(deleteButton.dataset.deleteInquiry);
   });
+  document.getElementById("my-pending-inquiry-list")?.addEventListener("click", (event) => {
+    const imageButton = event.target.closest("[data-inquiry-image]");
+    if (imageButton) {
+      openInquiryImage(imageButton.dataset.inquiryImage);
+      return;
+    }
+    const editButton = event.target.closest("[data-edit-inquiry]");
+    if (editButton) {
+      openInquiryEditDialog(editButton.dataset.editInquiry);
+      return;
+    }
+    const deleteButton = event.target.closest("[data-delete-inquiry]");
+    if (deleteButton) deleteMyInquiry(deleteButton.dataset.deleteInquiry);
+  });
   loadInquiryBoard();
 }
 
@@ -4238,7 +4258,7 @@ async function renderAdminInquiries() {
   }
   target.innerHTML = inquiries.map((inquiry) => `
     <article class="admin-inquiry-card">
-      <header><div><span class="inquiry-status ${inquiry.is_answered ? "is-answered" : ""}">${inquiry.is_answered ? "답변 완료" : "답변 대기"}</span><h3>${escapeHTML(inquiry.title || "제목 없음")}</h3></div>${inquiry.is_secret ? '<span class="admin-secret-badge">비밀글</span>' : '<span class="admin-public-badge">공개글</span>'}</header>
+      <header><div><span class="inquiry-status ${inquiry.is_answered ? "is-answered" : ""}">${inquiry.is_answered ? "답변 완료" : "답변 대기"}</span><h3>${escapeHTML(inquiry.title || "제목 없음")}</h3></div><div class="admin-inquiry-header-actions">${inquiry.is_secret ? '<span class="admin-secret-badge">비밀글</span>' : '<span class="admin-public-badge">공개글</span>'}<button class="button button-danger" type="button" data-admin-delete-inquiry="${escapeHTML(inquiry.id)}">문의 삭제</button></div></header>
       <div class="inquiry-meta"><span>${escapeHTML(inquiry.author_name || "회원")} · ${escapeHTML(inquiry.author_email || "-")}</span><time>${formatDate(inquiry.created_at)}</time></div>
       <p class="inquiry-content">${inquiryTextMarkup(inquiry.content)}</p>
       ${createInquiryImagesMarkup(inquiry)}
@@ -4251,9 +4271,33 @@ async function renderAdminInquiries() {
   `).join("");
 }
 
-function handleAdminInquiryImageAction(event) {
+async function handleAdminInquiryImageAction(event) {
   const imageButton = event.target.closest("[data-inquiry-image]");
-  if (imageButton) openInquiryImage(imageButton.dataset.inquiryImage);
+  if (imageButton) {
+    openInquiryImage(imageButton.dataset.inquiryImage);
+    return;
+  }
+  const deleteButton = event.target.closest("[data-admin-delete-inquiry]");
+  if (!deleteButton || deleteButton.disabled) return;
+  if (!window.confirm("이 문의를 삭제할까요? 답변과 첨부 사진도 함께 삭제되며 복구할 수 없습니다.")) return;
+  deleteButton.disabled = true;
+  deleteButton.textContent = "삭제 중...";
+  const { data, error } = await window.btlrSupabase.rpc("admin_delete_inquiry", {
+    target_inquiry_id: deleteButton.dataset.adminDeleteInquiry,
+  });
+  if (error) {
+    deleteButton.disabled = false;
+    deleteButton.textContent = "문의 삭제";
+    showToast(error.message);
+    return;
+  }
+  const imagePaths = Array.isArray(data) ? data.filter(Boolean) : [];
+  if (imagePaths.length) {
+    const { error: storageError } = await window.btlrSupabase.storage.from("inquiry-images").remove(imagePaths);
+    if (storageError) console.warn("삭제된 문의의 첨부 사진을 정리하지 못했습니다.", storageError);
+  }
+  showToast("문의를 삭제했습니다.");
+  await renderAdminInquiries();
 }
 
 async function handleAdminInquiryAnswerSubmit(event) {

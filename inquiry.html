@@ -39,6 +39,11 @@
         </aside>
 
         <section class="inquiry-board" aria-labelledby="inquiry-board-title">
+          <section id="my-pending-inquiry-panel" class="my-pending-inquiry-panel" hidden>
+            <div class="inquiry-board-heading"><div><p class="eyebrow">MY PENDING INQUIRIES</p><h2>내 답변 대기 문의</h2></div></div>
+            <p class="my-pending-inquiry-note">답변 전 문의는 본인과 관리자만 볼 수 있으며, 여기에서 수정하거나 삭제할 수 있습니다.</p>
+            <div id="my-pending-inquiry-list" class="inquiry-list"></div>
+          </section>
           <div class="inquiry-board-heading"><div><p class="eyebrow">ALL INQUIRIES</p><h2 id="inquiry-board-title">전체 문의</h2></div><button id="refresh-inquiries" class="button button-secondary" type="button">새로고침</button></div>
           <div id="inquiry-list" class="inquiry-list" aria-live="polite"></div>
         </section>

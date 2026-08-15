@@ -824,6 +824,11 @@ img {
   -webkit-backdrop-filter: blur(14px);
 }
 
+/* 권한별 메뉴를 구성하기 전의 짧은 순간에는 불완전한 메뉴를 노출하지 않는다. */
+.site-header:not(.is-header-ready) .nav-inner {
+  visibility: hidden;
+}
+
 .header-inner {
   width: min(calc(100% - 40px), var(--shell));
   min-height: 96px;

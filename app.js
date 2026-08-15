@@ -282,6 +282,7 @@ const mockBooks = [
 
 let toastTimer = null;
 let currentUserCache = null;
+const HEADER_USER_CACHE_KEY = "btlr_header_user";
 let booksCache = mockBooks;
 let loansCache = [];
 let reservationsCache = [];
@@ -366,14 +367,20 @@ const ADMIN_BOOK_DRAFT_PREFIX = "btlr_admin_book_draft";
 const ADMIN_BOOK_DRAFT_DB = "btlr-admin-drafts";
 
 async function initApp() {
+  const cachedHeaderUser = getCachedHeaderUser();
+  if (cachedHeaderUser) {
+    currentUserCache = cachedHeaderUser;
+    renderAuthArea();
+  }
+
   await loadCurrentUser();
+  renderAuthArea();
   await Promise.all([
     loadBooksFromSupabase(),
     loadUserLoansFromSupabase(),
     loadUserReservationsFromSupabase(),
   ]);
   handleHeaderSearch();
-  renderAuthArea();
   initAdminNavigationMenu();
   handleGlobalActions();
   initNotificationCenter();
@@ -807,15 +814,36 @@ async function logoutUser() {
     await window.btlrSupabase.auth.signOut();
   }
   currentUserCache = null;
+  sessionStorage.removeItem(HEADER_USER_CACHE_KEY);
 }
 
 function getCurrentUser() {
   return currentUserCache;
 }
 
+function getCachedHeaderUser() {
+  try {
+    const cachedUser = JSON.parse(sessionStorage.getItem(HEADER_USER_CACHE_KEY) || "null");
+    if (!cachedUser?.id || !cachedUser?.role) return null;
+    return cachedUser;
+  } catch {
+    sessionStorage.removeItem(HEADER_USER_CACHE_KEY);
+    return null;
+  }
+}
+
+function cacheHeaderUser(user) {
+  if (!user) {
+    sessionStorage.removeItem(HEADER_USER_CACHE_KEY);
+    return;
+  }
+  sessionStorage.setItem(HEADER_USER_CACHE_KEY, JSON.stringify(user));
+}
+
 async function loadCurrentUser(knownUser = null) {
   if (!window.btlrSupabase) {
     currentUserCache = null;
+    cacheHeaderUser(null);
     return null;
   }
 
@@ -824,6 +852,7 @@ async function loadCurrentUser(knownUser = null) {
     const { data, error } = await window.btlrSupabase.auth.getSession();
     if (error || !data.session?.user) {
       currentUserCache = null;
+      cacheHeaderUser(null);
       return null;
     }
     authUser = data.session.user;
@@ -847,6 +876,7 @@ async function loadCurrentUser(knownUser = null) {
     role: profile?.role || "member",
     createdAt: profile?.created_at || authUser.created_at,
   };
+  cacheHeaderUser(currentUserCache);
   return currentUserCache;
 }
 
@@ -1207,6 +1237,9 @@ function renderAuthArea() {
   });
 
   updateAdminNavigationState();
+  document.querySelectorAll(".site-header").forEach((header) => {
+    header.classList.add("is-header-ready");
+  });
 }
 
 function getSafeNotificationLink(value) {

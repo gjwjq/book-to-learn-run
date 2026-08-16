@@ -5115,11 +5115,16 @@ img {
 /* Reading room */
 .reading-room-main {
   min-height: 70vh;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
   padding-bottom: 100px;
   background: #f6f2ea;
 }
 
 .reading-room-content {
+  min-width: 0;
+  max-width: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(290px, 0.55fr);
   align-items: start;
@@ -5129,6 +5134,8 @@ img {
 
 .reading-room-booking,
 .reading-room-my-list {
+  min-width: 0;
+  max-width: 100%;
   padding: 28px;
   border: 1px solid #dfd5c8;
   border-radius: 18px;
@@ -5239,6 +5246,9 @@ img {
 }
 
 .reading-room-floor {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   display: grid;
   grid-template-columns: 24px minmax(820px, 1fr) 24px;
   grid-template-rows: 26px auto 36px;
@@ -5246,6 +5256,8 @@ img {
   margin-top: 20px;
   padding: 17px 18px;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid #d9cab9;
   border-radius: 18px;
   background:
@@ -5786,6 +5798,17 @@ img {
 }
 
 @media (max-width: 600px) {
+  body[data-page="reading-room"] {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  body[data-page="reading-room"] .site-header,
+  body[data-page="reading-room"] .site-footer {
+    width: 100%;
+    max-width: 100%;
+  }
+
   .reading-room-main {
     padding-bottom: 60px;
   }

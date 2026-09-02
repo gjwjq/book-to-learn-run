@@ -7,7 +7,7 @@
     <title>BOOK TO LEARN &amp; RUN</title>
     <link rel="icon" href="image/logo.png" type="image/png" />
     <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0" defer></script>
     <script src="config.js" defer></script>
     <script src="supabase-client.js" defer></script>
     <script src="app.js" defer></script>
@@ -29,7 +29,7 @@
       </div>
       <nav class="main-nav" aria-label="주요 메뉴">
         <div class="nav-inner">
-          <a class="active" href="index.html">홈</a>
+          <a class="active" aria-current="page" href="index.html">홈</a>
           <a href="search.html">도서검색</a>
           <a href="mypage.html">마이페이지</a>
         </div>
@@ -42,13 +42,13 @@
           <div class="hero-copy">
             <p class="eyebrow">READ · LEARN · RUN</p>
             <h1>도서 검색부터 예약까지,<br /><em>모바일에서<br /><span class="hero-phrase">한 번에</span></em></h1>
-            <p class="hero-description">흩어진 도서관 정보를 한곳에 모았습니다. 원하는 책의 위치와 대출 상태를 확인하고, 다음 독서까지 가볍게 이어가세요.</p>
+            <p class="hero-description">흩어진 도서관 정보를 한 곳에 모았습니다. 원하는 책의 보유 여부와 대출 상태를 확인하고, 다음 독서까지 가볍게 이어가세요.</p>
             <form class="hero-search" role="search">
               <label class="sr-only" for="hero-search-input">도서 검색</label>
               <input id="hero-search-input" name="q" type="search" placeholder="오늘은 어떤 책을 찾고 있나요?" autocomplete="off" />
               <button class="button button-primary" type="submit">책 찾기 <span aria-hidden="true">→</span></button>
             </form>
-            <div class="keyword-row" aria-label="추천 검색어">
+            <div class="keyword-row" role="group" aria-label="추천 검색어">
               <span>추천</span>
               <button type="button" data-keyword="자기계발">자기계발</button>
               <button type="button" data-keyword="진로">진로</button>
@@ -62,7 +62,7 @@
             </div>
             <div class="recent-searches" id="recent-searches" hidden></div>
           </div>
-          <div class="hero-visual" aria-label="책과 독서 공간을 표현한 이미지">
+          <div class="hero-visual" role="img" aria-label="책과 독서 공간을 표현한 이미지">
             <div class="hero-image"></div>
             <div class="floating-card floating-card-top"><span>오늘의 발견</span><strong>새로운 관점을<br />만나는 가장 빠른 길</strong></div>
             <div class="floating-card floating-card-bottom"><b id="available-count">0</b><span>권의 도서를<br />지금 바로 대출 가능</span></div>
@@ -79,7 +79,7 @@
             <a class="service-card" href="search.html"><span class="service-icon">⌕</span><div><strong>통합 도서 검색</strong><small>제목·저자·키워드를 한 번에</small></div><span>→</span></a>
             <a class="service-card" href="search.html?status=%EB%8C%80%EC%B6%9C%20%EA%B0%80%EB%8A%A5"><span class="service-icon">✓</span><div><strong>대출 가능 도서</strong><small>지금 빌릴 수 있는 책만 보기</small></div><span>→</span></a>
             <a class="service-card" href="reading-room.html"><span class="service-icon">⌑</span><div><strong>열람실 예약</strong><small>날짜·시간·좌석 미리 선택</small></div><span>→</span></a>
-            <a class="service-card" href="mypage.html"><span class="service-icon">♡</span><div><strong>내 서재</strong><small>찜·대여·예약 현황 관리</small></div><span>→</span></a>
+            <a class="service-card" href="mypage.html"><span class="service-icon">♡</span><div><strong>내 서재</strong><small>찜·대출·예약 현황 관리</small></div><span>→</span></a>
           </div>
         </div>
       </section>
@@ -146,7 +146,7 @@
     <footer class="site-footer">
       <div class="shell footer-inner">
         <div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div>
-        <div class="footer-note"><p>사업자 : Book To Learn&amp;Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div>
+        <div class="footer-note"><p>사업자 : Book To Learn &amp; Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div>
       </div>
     </footer>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

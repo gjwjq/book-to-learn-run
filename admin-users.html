@@ -7,12 +7,31 @@
     <title>회원 관리 | BOOK TO LEARN &amp; RUN</title>
     <link rel="icon" href="image/logo.png" type="image/png" />
     <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script><script src="config.js" defer></script><script src="supabase-client.js" defer></script><script src="app.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0" defer></script><script src="config.js" defer></script><script src="supabase-client.js" defer></script><script src="app.js" defer></script>
   </head>
   <body data-page="admin" data-admin-section="users">
     <a class="skip-link" href="#main-content">본문 바로가기</a>
     <header class="site-header"><div class="header-inner"><a class="brand" href="index.html" aria-label="BOOK TO LEARN &amp; RUN 홈"><span class="brand-mark" aria-hidden="true"><span></span></span><span class="brand-copy"><strong>BOOK TO LEARN &amp; RUN</strong><small>PUBLIC LIBRARY SERVICE</small></span></a><form class="header-search" role="search"><label class="sr-only" for="header-search-admin-users">도서 검색</label><input id="header-search-admin-users" name="q" type="search" placeholder="책 제목, 저자, 키워드 검색" /><button type="submit" aria-label="검색"><span aria-hidden="true">⌕</span><span class="search-text">검색</span></button></form><div class="auth-area" data-auth-area></div></div><nav class="main-nav" aria-label="주요 메뉴"><div class="nav-inner"><a href="index.html">홈</a><a href="search.html">도서검색</a><a href="mypage.html">마이페이지</a></div></nav></header>
-    <main id="main-content" class="page-main admin-main"><div class="shell"><div class="admin-heading"><p class="eyebrow">ADMINISTRATION · MEMBERS</p><h1>회원 관리</h1><p>회원 정보를 확인하고 이름과 권한을 관리합니다.</p></div><p id="admin-page-message" class="form-message" role="alert"></p><div id="admin-content" hidden><section id="users" class="admin-panel admin-panel-first"><div class="admin-panel-heading"><div><p class="eyebrow">MEMBERS</p><h2>유저 목록</h2></div><button id="refresh-users" class="button button-secondary" type="button">새로고침</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>아이디</th><th>이름</th><th>이메일</th><th>권한</th><th>가입일</th><th>최근 로그인</th><th>관리</th></tr></thead><tbody id="admin-user-list"></tbody></table></div><nav id="admin-user-pagination" class="admin-pagination" aria-label="유저 목록 페이지"></nav></section></div></div></main>
-    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn&amp;Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer><div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <main id="main-content" class="page-main admin-main">
+      <div class="shell">
+        <div class="admin-heading"><p class="eyebrow">ADMINISTRATION · MEMBERS</p><h1>회원 관리</h1><p>회원 정보를 확인하고 이름과 권한을 관리합니다.</p></div>
+        <p id="admin-page-message" class="form-message" role="alert" aria-live="assertive"></p>
+        <div id="admin-content" hidden>
+          <section id="users" class="admin-panel admin-panel-first">
+            <div class="admin-panel-heading"><div><p class="eyebrow">MEMBERS</p><h2>회원 목록</h2></div><button id="refresh-users" class="button button-secondary" type="button">새로고침</button></div>
+            <form id="admin-user-filter" class="admin-list-filter" role="search">
+              <div><label for="admin-user-query">아이디·이름·이메일 검색</label><input id="admin-user-query" type="search" placeholder="회원 정보 입력" autocomplete="off" /></div>
+              <div><label for="admin-user-role-filter">권한</label><select id="admin-user-role-filter"><option value="all">전체 권한</option><option value="member">회원</option><option value="admin">부관리자</option><option value="owner">주 관리자</option></select></div>
+              <div><label for="admin-user-sort">정렬</label><select id="admin-user-sort"><option value="newest">최근 가입순</option><option value="oldest">오래된 가입순</option><option value="name">이름순</option><option value="recent-login">최근 로그인순</option></select></div>
+              <button class="button button-primary" type="submit">검색</button><button id="admin-user-filter-reset" class="button button-secondary" type="button">초기화</button>
+              <p id="admin-user-filter-summary" class="admin-list-filter-summary" role="status" aria-live="polite"></p>
+            </form>
+            <div class="admin-table-wrap"><table class="admin-table"><caption class="sr-only">도서관 회원 정보와 권한 관리 목록</caption><thead><tr><th scope="col">아이디</th><th scope="col">이름</th><th scope="col">이메일</th><th scope="col">권한</th><th scope="col">가입일</th><th scope="col">최근 로그인</th><th scope="col">관리</th></tr></thead><tbody id="admin-user-list"></tbody></table></div>
+            <nav id="admin-user-pagination" class="admin-pagination" aria-label="회원 목록 페이지"></nav>
+          </section>
+        </div>
+      </div>
+    </main>
+    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn &amp; Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer><div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>
 </html>

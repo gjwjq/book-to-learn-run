@@ -7,7 +7,7 @@
     <title>도서 관리 | BOOK TO LEARN &amp; RUN</title>
     <link rel="icon" href="image/logo.png" type="image/png" />
     <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0" defer></script>
     <script src="config.js" defer></script>
     <script src="supabase-client.js" defer></script>
     <script src="app.js" defer></script>
@@ -46,7 +46,15 @@
             <div class="admin-section-divider"><span>회원 도서 추가 요청</span></div>
             <section class="admin-request-panel" aria-labelledby="admin-request-title">
               <div class="admin-panel-heading"><div><p class="eyebrow">MEMBER REQUESTS</p><h2 id="admin-request-title">회원 도서 추가 요청</h2></div><button id="refresh-book-requests" class="button button-secondary" type="button">새로고침</button></div>
+              <form id="admin-book-request-filter" class="admin-list-filter" role="search">
+                <div><label for="admin-book-request-query">제목·요청자 검색</label><input id="admin-book-request-query" type="search" placeholder="도서 제목 또는 요청자" autocomplete="off" /></div>
+                <div><label for="admin-book-request-status">처리 상태</label><select id="admin-book-request-status"><option value="all">전체 상태</option><option value="pending">승인 대기</option><option value="approved">추가 완료</option><option value="rejected">요청 거절</option><option value="cancelled">요청 취소</option></select></div>
+                <div><label for="admin-book-request-sort">정렬</label><select id="admin-book-request-sort"><option value="newest">최근 요청순</option><option value="oldest">오래된 요청순</option><option value="title">제목순</option></select></div>
+                <button class="button button-primary" type="submit">검색</button><button id="admin-book-request-filter-reset" class="button button-secondary" type="button">초기화</button>
+                <p id="admin-book-request-filter-summary" class="admin-list-filter-summary" role="status" aria-live="polite"></p>
+              </form>
               <div id="admin-book-request-list" class="admin-request-list" aria-live="polite"></div>
+              <nav id="admin-book-request-pagination" class="admin-pagination" aria-label="도서 추가 요청 목록 페이지"></nav>
             </section>
 
             <div class="admin-section-divider"><span>관리자 도서 가져오기</span></div>
@@ -95,8 +103,8 @@
       </div>
     </main>
 
-    <dialog id="book-edit-dialog" class="admin-dialog">
-      <div class="admin-dialog-heading"><div><p class="eyebrow">EDIT BOOK</p><h2>도서 정보 수정</h2></div><button id="close-book-edit" class="dialog-close" type="button" aria-label="닫기">×</button></div>
+    <dialog id="book-edit-dialog" class="admin-dialog" aria-labelledby="book-edit-title" aria-describedby="admin-book-edit-message">
+      <div class="admin-dialog-heading"><div><p class="eyebrow">EDIT BOOK</p><h2 id="book-edit-title">도서 정보 수정</h2></div><button id="close-book-edit" class="dialog-close" type="button" aria-label="도서 정보 수정 창 닫기">×</button></div>
       <p id="admin-book-edit-message" class="form-message dialog-form-message" role="alert" aria-live="assertive"></p>
       <form id="admin-book-edit-form" class="admin-book-form">
         <input type="hidden" name="originalId" /><input type="hidden" name="originalTotalQuantity" /><input name="thumbnail" type="hidden" />
@@ -116,7 +124,7 @@
         <div class="admin-form-actions"><button id="save-book-edit" class="button button-primary" type="submit">저장</button><button id="cancel-book-edit" class="button button-secondary" type="button">취소</button></div>
       </form>
     </dialog>
-    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn&amp;Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
+    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn &amp; Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>
 </html>

@@ -7,300 +7,53 @@ const STORAGE_KEYS = {
   reservations: "btlr_reservations",
 };
 
-const mockBooks = [
-  {
-    id: "book-001",
-    title: "생각을 모으는 사람",
-    author: "모니카 페트",
-    publisher: "풀빛",
-    publishedDate: "2023-03-15",
-    category: "인문",
-    keywords: ["생각", "철학", "마음", "성찰"],
-    description: "바쁘게 흘러가는 일상에서 잠시 멈춰 생각을 모으는 일의 의미를 이야기합니다. 나의 생각을 귀하게 바라보고 타인의 관점과 조용히 만나는 시간을 선물하는 책입니다.",
-    shortDescription: "흩어진 생각을 모아 나만의 관점을 발견하는 따뜻한 이야기.",
-    thumbnail: "image/images/images (4).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-04-12",
-  },
-  {
-    id: "book-002",
-    title: "잘 읽히는 보고서 문장의 비밀",
-    author: "이윤경",
-    publisher: "한빛미디어",
-    publishedDate: "2024-02-20",
-    category: "진로/취업",
-    keywords: ["보고서", "글쓰기", "취업", "직장"],
-    description: "보고서와 자기소개서, 이메일처럼 실무에서 자주 쓰는 문장을 더 명확하고 설득력 있게 다듬는 방법을 알려줍니다. 사례를 통해 바로 적용할 수 있는 글쓰기 원칙을 배울 수 있습니다.",
-    shortDescription: "실무 문장을 짧고 정확하게 만드는 보고서 글쓰기 안내서.",
-    thumbnail: "image/images/images (9).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-06-02",
-  },
-  {
-    id: "book-003",
-    title: "개발하는 남자의 핸즈온 플러터",
-    author: "김성덕",
-    publisher: "한빛미디어",
-    publishedDate: "2023-08-01",
-    category: "IT",
-    keywords: ["플러터", "앱개발", "모바일", "프로그래밍"],
-    description: "플러터의 기본 위젯부터 상태 관리와 실제 앱 배포 흐름까지 하나의 프로젝트로 익히는 실습서입니다. 모바일 앱 개발을 처음 시작하는 독자도 차근차근 따라갈 수 있습니다.",
-    shortDescription: "실전 프로젝트로 배우는 플러터 모바일 앱 개발.",
-    thumbnail: "image/images/images (10).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-05-28",
-  },
-  {
-    id: "book-004",
-    title: "실무로 통하는 클린 코드",
-    author: "제이슨 앨럼",
-    publisher: "한빛미디어",
-    publishedDate: "2024-01-10",
-    category: "IT",
-    keywords: ["클린코드", "개발자", "코딩", "설계"],
-    description: "읽기 쉽고 유지보수하기 좋은 코드를 만들기 위한 실용적인 원칙을 담았습니다. 이름 짓기, 함수 설계, 오류 처리, 테스트 등 개발 현장에서 반복해서 마주치는 문제를 구체적으로 설명합니다.",
-    shortDescription: "현장에서 오래 살아남는 코드를 위한 실전 원칙.",
-    thumbnail: "image/images/images (11).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-06-11",
-  },
-  {
-    id: "book-005",
-    title: "네트워크 인프라 자동화",
-    author: "맷 오스왈트 외",
-    publisher: "한빛미디어",
-    publishedDate: "2023-11-24",
-    category: "IT",
-    keywords: ["네트워크", "자동화", "인프라", "파이썬"],
-    description: "반복적인 네트워크 운영을 코드로 자동화하는 방법과 실무 도구를 소개합니다. 네트워크 엔지니어와 개발자가 함께 이해할 수 있도록 개념부터 운영 사례까지 폭넓게 다룹니다.",
-    shortDescription: "코드로 더 빠르고 안전하게 운영하는 네트워크 인프라.",
-    thumbnail: "image/images/images (12).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-04-08",
-  },
-  {
-    id: "book-006",
-    title: "실무로 통하는 ML 문제 해결 with 파이썬",
-    author: "카일 갤러틴",
-    publisher: "한빛미디어",
-    publishedDate: "2024-05-17",
-    category: "IT",
-    keywords: ["머신러닝", "파이썬", "데이터", "AI"],
-    description: "머신러닝 프로젝트에서 데이터 품질, 모델 선택, 평가와 배포까지 문제를 정의하고 해결하는 과정을 안내합니다. 단순한 알고리즘 암기를 넘어 실무 판단력을 기를 수 있습니다.",
-    shortDescription: "현실의 데이터 문제를 해결하는 머신러닝 실전 가이드.",
-    thumbnail: "image/images/images (13).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-06-14",
-  },
-  {
-    id: "book-007",
-    title: "자바스크립트 + 리액트 디자인 패턴",
-    author: "애디 오스마니",
-    publisher: "한빛미디어",
-    publishedDate: "2024-04-08",
-    category: "IT",
-    keywords: ["자바스크립트", "리액트", "프론트엔드", "디자인패턴"],
-    description: "현대 자바스크립트와 리액트 애플리케이션에서 재사용 가능한 구조를 만드는 디자인 패턴을 설명합니다. 성능과 유지보수성을 함께 고려하는 프론트엔드 설계를 배울 수 있습니다.",
-    shortDescription: "확장 가능한 프론트엔드를 위한 현대적 디자인 패턴.",
-    thumbnail: "image/images/images (14).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-05-21",
-  },
-  {
-    id: "book-008",
-    title: "더 나은 프로그래머가 되는 법",
-    author: "피트 구들리프",
-    publisher: "한빛미디어",
-    publishedDate: "2023-09-12",
-    category: "자기계발",
-    keywords: ["개발자", "성장", "커리어", "습관"],
-    description: "좋은 코드를 넘어 좋은 개발자로 성장하기 위한 태도와 습관을 다룹니다. 협업, 학습, 시간 관리, 커뮤니케이션 등 기술 바깥의 역량까지 현실적인 조언으로 풀어냅니다.",
-    shortDescription: "기술과 태도를 함께 키우는 개발자 성장 안내서.",
-    thumbnail: "image/images/images (15).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-03-19",
-  },
-  {
-    id: "book-009",
-    title: "당근 마케팅",
-    author: "김용태",
-    publisher: "한빛비즈",
-    publishedDate: "2023-06-30",
-    category: "경제",
-    keywords: ["마케팅", "브랜딩", "비즈니스", "플랫폼"],
-    description: "사람과 동네, 신뢰를 연결하는 로컬 플랫폼의 성장 방식을 바탕으로 오늘날의 마케팅 전략을 살펴봅니다. 고객과 오래 관계 맺는 브랜드의 원칙을 쉽게 설명합니다.",
-    shortDescription: "사람과 지역을 연결해 성장하는 마케팅의 원리.",
-    thumbnail: "image/images/images (16).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-02-15",
-  },
-  {
-    id: "book-010",
-    title: "이것이 취업을 위한 컴퓨터 과학이다",
-    author: "최지민",
-    publisher: "한빛미디어",
-    publishedDate: "2024-07-01",
-    category: "진로/취업",
-    keywords: ["취업", "CS", "면접", "개발자"],
-    description: "개발자 취업에 필요한 컴퓨터 과학 핵심 개념을 면접 질문과 함께 정리합니다. 운영체제, 네트워크, 자료구조와 데이터베이스를 연결해 이해하도록 돕습니다.",
-    shortDescription: "개발자 면접과 실무를 연결하는 컴퓨터 과학 핵심.",
-    thumbnail: "image/images/images (17).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-06-18",
-  },
-  {
-    id: "book-011",
-    title: "실무로 통하는 타입스크립트",
-    author: "조시 골드버그",
-    publisher: "한빛미디어",
-    publishedDate: "2023-12-05",
-    category: "IT",
-    keywords: ["타입스크립트", "웹개발", "프로그래밍", "실무"],
-    description: "타입 시스템의 기본부터 제네릭, 선언 파일, 설정과 마이그레이션까지 실무에 필요한 타입스크립트 지식을 다룹니다. 자바스크립트 프로젝트를 더 안전하게 만드는 방법을 익힐 수 있습니다.",
-    shortDescription: "자바스크립트 프로젝트를 단단하게 만드는 타입 설계.",
-    thumbnail: "image/images/images (18).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-05-04",
-  },
-  {
-    id: "book-012",
-    title: "매일의 작은 실행",
-    author: "윤서진",
-    publisher: "마음서재",
-    publishedDate: "2024-08-22",
-    category: "자기계발",
-    keywords: ["습관", "실행", "성장", "루틴"],
-    description: "거창한 목표보다 오늘의 작은 행동을 선택하는 방법을 이야기합니다. 꾸준함을 방해하는 마음을 이해하고 자신에게 맞는 실행 리듬을 설계하도록 돕습니다.",
-    shortDescription: "작은 행동을 꾸준한 변화로 바꾸는 현실적인 습관법.",
-    thumbnail: "image/images/images (19).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-06-08",
-  },
-  {
-    id: "book-013",
-    title: "AI 변호사 with 챗GPT",
-    author: "박상흠",
-    publisher: "한빛미디어",
-    publishedDate: "2024-03-04",
-    category: "인문",
-    keywords: ["AI", "법", "챗GPT", "사회"],
-    description: "생성형 AI가 법률 업무와 사회의 규칙을 어떻게 바꾸는지 다양한 사례로 살펴봅니다. 기술을 무조건 낙관하거나 두려워하기보다 책임 있게 활용할 관점을 제안합니다.",
-    shortDescription: "생성형 AI와 법률의 만남에서 발견하는 새로운 질문.",
-    thumbnail: "image/images/images (20).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-05-30",
-  },
-  {
-    id: "book-014",
-    title: "퇴근 후 시작하는 나의 첫 프로젝트",
-    author: "정하린",
-    publisher: "러닝앤런",
-    publishedDate: "2024-09-10",
-    category: "진로/취업",
-    keywords: ["사이드프로젝트", "포트폴리오", "진로", "커리어"],
-    description: "하고 싶은 일을 작은 프로젝트로 시작하고 결과물을 포트폴리오로 연결하는 과정을 안내합니다. 아이디어 선정부터 일정 관리, 기록과 회고까지 초보자의 눈높이에서 설명합니다.",
-    shortDescription: "작은 사이드 프로젝트를 커리어 자산으로 만드는 법.",
-    thumbnail: "image/images/images (21).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-06-19",
-  },
-  {
-    id: "book-015",
-    title: "오늘도 무사히, 마음 산책",
-    author: "한유진",
-    publisher: "포레스트북스",
-    publishedDate: "2024-01-29",
-    category: "에세이",
-    keywords: ["에세이", "마음", "위로", "일상"],
-    description: "완벽하지 않은 하루를 다정하게 통과하는 마음의 문장들을 담았습니다. 지친 날에는 잠시 쉬어도 괜찮다는 위로와 다시 걸을 용기를 건넵니다.",
-    shortDescription: "평범한 하루를 다정하게 보듬는 마음의 문장들.",
-    thumbnail: "image/images/images (22).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-03-02",
-  },
-  {
-    id: "book-016",
-    title: "우리가 건너온 여름",
-    author: "서이안",
-    publisher: "문학의숲",
-    publishedDate: "2024-06-14",
-    category: "소설",
-    keywords: ["소설", "청춘", "우정", "성장"],
-    description: "각자의 이유로 고향을 떠났던 세 친구가 오래된 도서관에서 다시 만나며 시작되는 이야기입니다. 지나온 계절과 아직 오지 않은 삶 사이에서 서로의 선택을 이해해 갑니다.",
-    shortDescription: "다시 만난 세 친구가 함께 건너는 한여름의 성장 소설.",
-    thumbnail: "image/images/images (23).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-06-13",
-  },
-  {
-    id: "book-017",
-    title: "돈의 흐름을 읽는 첫 수업",
-    author: "김도현",
-    publisher: "인사이트",
-    publishedDate: "2024-04-25",
-    category: "경제",
-    keywords: ["경제", "금융", "투자", "청년"],
-    description: "금리, 환율, 물가처럼 뉴스에서 자주 만나는 경제 개념을 일상의 언어로 설명합니다. 숫자에 겁먹지 않고 세상의 흐름을 읽는 기본 감각을 기를 수 있습니다.",
-    shortDescription: "일상과 뉴스가 연결되는 가장 쉬운 경제 입문.",
-    thumbnail: "image/images/images (24).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-05-18",
-  },
-  {
-    id: "book-018",
-    title: "문장 사이의 밤",
-    author: "이해원",
-    publisher: "달과문장",
-    publishedDate: "2023-10-18",
-    category: "에세이",
-    keywords: ["독서", "문장", "에세이", "기록"],
-    description: "책을 읽으며 밑줄 그은 문장과 그 곁에서 피어난 생각을 기록한 독서 에세이입니다. 한 문장이 한 사람의 하루를 어떻게 바꾸는지 잔잔하게 보여줍니다.",
-    shortDescription: "읽은 문장과 살아낸 하루가 만나는 독서 에세이.",
-    thumbnail: "image/images/images (25).jpg",
-    loanStatus: "대출 가능",
-    returnDate: null,
-    createdAt: "2025-04-25",
-  },
-];
+/*
+ * 도서 목록은 Supabase에서만 불러옵니다. 샘플 도서를 런타임에 자동으로
+ * 삽입하거나 연결 오류를 샘플 데이터로 가리지 않습니다.
+ */
 
 let toastTimer = null;
 let currentUserCache = null;
 const HEADER_USER_CACHE_KEY = "btlr_header_user";
-let booksCache = mockBooks;
+let booksCache = [];
+let booksLoadState = "idle";
+let booksLoadError = "";
 let loansCache = [];
 let reservationsCache = [];
 let readingRoomReservationsCache = [];
+let favoritesCache = [];
+let loansLoadState = "idle";
+let loansLoadError = "";
+let reservationsLoadState = "idle";
+let reservationsLoadError = "";
+let favoritesLoadState = "idle";
+let favoritesLoadError = "";
 let adminBookImportResults = [];
 let userBookSearchResults = [];
 let myBookRequestsCache = [];
 let inquiriesCache = [];
 let adminUsersCache = [];
+let adminBookRequestsCache = [];
+let adminRoomReservationsCache = [];
+let adminInquiriesCache = [];
 let notificationsCache = [];
 let notificationPollTimer = null;
 let notificationRealtimeChannel = null;
 let adminUserPage = 1;
 let adminBookPage = 1;
+let adminBookRequestPage = 1;
+let adminRoomPage = 1;
+let adminInquiryPage = 1;
+let publicInquiryPage = 1;
+let adminUserFilterState = { query: "", role: "all", sort: "newest" };
+let adminBookRequestFilterState = { query: "", status: "all", sort: "newest" };
+let adminRoomFilterState = { query: "", date: "", sort: "soonest" };
+let adminInquiryFilterState = { query: "", status: "all", visibility: "all" };
 let adminBookSearchQuery = "";
 let adminBookSort = "newest";
 const adminSelectedBookIds = new Set();
 const ADMIN_PAGE_SIZE = 20;
+const SEARCH_PAGE_SIZE = 20;
 const MAX_ACTIVE_BOOK_RESERVATIONS = 10;
 const MAX_PENDING_BOOK_REQUESTS = 10;
 const READING_ROOM_SEATS = 60;
@@ -372,7 +125,6 @@ async function initApp() {
   const cachedHeaderUser = getCachedHeaderUser();
   if (cachedHeaderUser) {
     currentUserCache = cachedHeaderUser;
-    renderAuthArea();
   }
 
   await loadCurrentUser();
@@ -381,6 +133,7 @@ async function initApp() {
     loadBooksFromSupabase(),
     loadUserLoansFromSupabase(),
     loadUserReservationsFromSupabase(),
+    loadFavoritesFromSupabase(),
   ]);
   handleHeaderSearch();
   initAdminNavigationMenu();
@@ -478,13 +231,49 @@ function getCurrentRelativeUrl() {
   return `${fileName}${window.location.search}${window.location.hash}`;
 }
 
+function createBookDetailUrl(bookId) {
+  const params = new URLSearchParams({ id: String(bookId || "") });
+  if (getCurrentPage() === "search") {
+    params.set("from", getCurrentRelativeUrl());
+  } else if (getCurrentPage() === "detail") {
+    const returnUrl = getBookDetailReturnUrl();
+    if (returnUrl !== "search.html") params.set("from", returnUrl);
+  }
+  return `detail.html?${params.toString()}`;
+}
+
+function getBookDetailReturnUrl() {
+  const candidate = String(getQueryParam("from") || "").trim();
+  return /^search\.html(?:[?#].*)?$/.test(candidate) ? candidate : "search.html";
+}
+
+function getFriendlyServiceError(error, fallback = "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.") {
+  const rawMessage = String(error?.message || error || "").trim();
+  const normalized = rawMessage.toLocaleLowerCase();
+  if (!rawMessage) return fallback;
+  if (/maximum|max_active|limit|too many/.test(normalized)) {
+    if (/loan|대출/.test(normalized)) return "대출 가능한 최대 권수를 초과했습니다. 대출 중인 도서를 반납한 뒤 다시 시도해 주세요.";
+    if (/reservation|예약/.test(normalized)) return `도서 예약은 최대 ${MAX_ACTIVE_BOOK_RESERVATIONS}권까지 가능합니다.`;
+    if (/request|요청/.test(normalized)) return `도서 추가 요청은 답변 대기 기준 최대 ${MAX_PENDING_BOOK_REQUESTS}권까지 가능합니다.`;
+  }
+  if (/not available|no available|재고|stock/.test(normalized)) return "현재 대출 가능한 수량이 없습니다.";
+  if (/already.*loan|already borrowed|이미.*대출/.test(normalized)) return "이미 대출 중인 도서입니다.";
+  if (/already.*reserv|duplicate.*reserv|이미.*예약/.test(normalized)) return "이미 예약한 도서입니다.";
+  if (/permission|row-level security|not authorized|forbidden/.test(normalized)) return "이 작업을 처리할 권한이 없습니다.";
+  if (/admin_archive_book|admin_archive_books/.test(normalized) && /function|schema cache|not find/.test(normalized)) {
+    return "도서 보관 삭제 기능이 데이터베이스에 아직 적용되지 않았습니다. 최신 Supabase SQL을 적용한 뒤 다시 시도해 주세요.";
+  }
+  if (/network|failed to fetch|load failed/.test(normalized)) return "네트워크 연결을 확인한 뒤 다시 시도해 주세요.";
+  return rawMessage || fallback;
+}
+
 function getStatusClass(status) {
   const map = {
     "대출 가능": "status-available",
     "대출 중": "status-loaned",
     "예약 가능": "status-reservable",
     "예약 완료": "status-reserved",
-    "대여 중": "status-my-loan",
+    "대출 중": "status-my-loan",
   };
   return map[status] || "status-reservable";
 }
@@ -496,6 +285,72 @@ function getBooks() {
   }));
 }
 
+function normalizeBookKeywords(keywords, category = "") {
+  const normalizedCategory = String(category || "").trim().toLocaleLowerCase("ko-KR");
+  const values = Array.isArray(keywords)
+    ? keywords
+    : String(keywords || "").split(",");
+  return [...new Set(values
+    .map((keyword) => String(keyword || "").trim())
+    .filter(Boolean)
+    .filter((keyword) => keyword.toLocaleLowerCase("ko-KR") !== normalizedCategory))]
+    .slice(0, 8);
+}
+
+function getDescriptionFallback(book = {}) {
+  const title = String(book.title || "이 도서").trim();
+  const author = String(book.author || "저자 미상").trim();
+  return `${author}의 『${title}』을 소개하는 도서입니다.`;
+}
+
+function normalizeCompleteBookText(value, book = {}, options = {}) {
+  const fallback = String(options.fallback || getDescriptionFallback(book)).trim();
+  const raw = String(value || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!raw) return fallback;
+
+  if (/[.!?。！？]["'”’」』)]?\s*$/.test(raw)) return raw;
+  const hasTrailingEllipsis = /(?:\.{2,}|…+)\s*$/.test(raw);
+  const withoutTrailingEllipsis = hasTrailingEllipsis
+    ? raw.replace(/(?:\.{2,}|…+)\s*$/, "").trim()
+    : raw;
+
+  const sentenceEndPattern = /[.!?。！？]["'”’」』)]?/g;
+  let lastCompleteEnd = -1;
+  for (const match of withoutTrailingEllipsis.matchAll(sentenceEndPattern)) {
+    lastCompleteEnd = match.index + match[0].length;
+  }
+  if (hasTrailingEllipsis && lastCompleteEnd > 0) {
+    return withoutTrailingEllipsis.slice(0, lastCompleteEnd).trim();
+  }
+
+  if (/(?:다|요|함|됨|임|한다|된다|있다|없다|준다|낸다|보인다|전한다|담았다|소개한다|살펴본다)$/u.test(withoutTrailingEllipsis)) {
+    return `${withoutTrailingEllipsis}.`;
+  }
+  // API가 잘림표식을 주지 않은 원문은 손실을 막기 위해 임의로 자르거나
+  // 일반 문구로 덮지 않습니다. 명백한 …/.. 표식인데 완결 문장이 없어도 원문을 보존합니다.
+  return raw;
+}
+
+function getFirstCompleteSentence(value, book = {}) {
+  const normalized = normalizeCompleteBookText(value, book);
+  const match = normalized.match(/^.*?[.!?。！？]["'”’」』)]?(?:\s|$)/u);
+  return (match?.[0] || normalized).trim();
+}
+
+function normalizeBookDescriptions(book = {}) {
+  const description = normalizeCompleteBookText(book.description, book);
+  let shortDescription = normalizeCompleteBookText(book.shortDescription || book.short_description, book, {
+    fallback: getFirstCompleteSentence(description, book),
+  });
+  if (shortDescription === description || shortDescription.length > 240) {
+    shortDescription = getFirstCompleteSentence(description, book);
+  }
+  return { description, shortDescription };
+}
+
 function getBookById(bookId) {
   return booksCache.find((book) => book.id === bookId) || null;
 }
@@ -503,6 +358,14 @@ function getBookById(bookId) {
 function mapDatabaseBook(book) {
   const totalQuantity = Math.max(Number(book.total_quantity) || 1, 1);
   const availableQuantity = Math.max(Math.min(Number(book.available_quantity) || 0, totalQuantity), 0);
+  const rawDescription = String(book.description || "").trim();
+  const rawShortDescription = String(book.short_description || "").trim();
+  const normalizedDescriptions = normalizeBookDescriptions({
+    title: book.title,
+    author: book.author,
+    description: rawDescription,
+    shortDescription: rawShortDescription,
+  });
   return {
     id: book.id,
     title: book.title || "제목 없음",
@@ -510,9 +373,13 @@ function mapDatabaseBook(book) {
     publisher: book.publisher || "",
     publishedDate: book.published_date || null,
     category: book.category || "기타",
-    keywords: Array.isArray(book.keywords) ? book.keywords : [],
-    description: book.description || "",
-    shortDescription: book.short_description || book.description || "",
+    keywords: normalizeBookKeywords(book.keywords, book.category),
+    originalKeywords: Array.isArray(book.keywords) ? book.keywords : [],
+    description: normalizedDescriptions.description,
+    shortDescription: normalizedDescriptions.shortDescription,
+    originalDescription: rawDescription,
+    originalShortDescription: rawShortDescription,
+    descriptionNeedsRepair: isBookDescriptionIncomplete({ description: rawDescription }),
     thumbnail: book.thumbnail || "",
     totalQuantity,
     availableQuantity,
@@ -523,16 +390,18 @@ function mapDatabaseBook(book) {
 }
 
 function serializeBookForDatabase(book) {
+  const normalizedDescriptions = normalizeBookDescriptions(book);
+  const category = String(book.category || "기타").trim() || "기타";
   return {
     id: book.id,
     title: book.title,
     author: book.author,
     publisher: book.publisher || null,
     published_date: book.publishedDate || null,
-    category: book.category || "기타",
-    keywords: book.keywords || [],
-    description: book.description || null,
-    short_description: book.shortDescription || null,
+    category,
+    keywords: normalizeBookKeywords(book.keywords, category),
+    description: normalizedDescriptions.description,
+    short_description: normalizedDescriptions.shortDescription,
     thumbnail: book.thumbnail || null,
     total_quantity: Math.max(Number(book.totalQuantity) || 1, 1),
     return_date: book.returnDate || null,
@@ -540,12 +409,38 @@ function serializeBookForDatabase(book) {
 }
 
 async function loadBooksFromSupabase() {
-  if (!window.btlrSupabase) return;
-  const { data, error } = await window.btlrSupabase
+  booksLoadState = "loading";
+  booksLoadError = "";
+  if (!window.btlrSupabase) {
+    booksCache = [];
+    booksLoadState = "error";
+    booksLoadError = "도서 데이터베이스에 연결할 수 없습니다.";
+    return { success: false, message: booksLoadError };
+  }
+  const fields = "id, title, author, publisher, published_date, category, keywords, description, short_description, thumbnail, loan_status, return_date, total_quantity, available_quantity, created_at";
+  let result = await window.btlrSupabase
     .from("books")
-    .select("id, title, author, publisher, published_date, category, keywords, description, short_description, thumbnail, loan_status, return_date, total_quantity, available_quantity, created_at")
+    .select(`${fields}, archived_at`)
+    .is("archived_at", null)
     .order("created_at", { ascending: false });
-  if (!error && data?.length) booksCache = data.map(mapDatabaseBook);
+  const archivedColumnUnavailable = result.error
+    && /archived_at|column.*not found|schema cache/i.test(`${result.error.code || ""} ${result.error.message || ""} ${result.error.details || ""}`);
+  if (archivedColumnUnavailable) {
+    result = await window.btlrSupabase
+      .from("books")
+      .select(fields)
+      .order("created_at", { ascending: false });
+  }
+  const { data, error } = result;
+  if (error) {
+    booksCache = [];
+    booksLoadState = "error";
+    booksLoadError = getFriendlyServiceError(error, "도서 목록을 불러오지 못했습니다.");
+    return { success: false, message: booksLoadError };
+  }
+  booksCache = (data || []).map(mapDatabaseBook);
+  booksLoadState = booksCache.length ? "success" : "empty";
+  return { success: true, empty: booksCache.length === 0 };
 }
 
 function searchBooks(query, books) {
@@ -574,10 +469,15 @@ function filterBooks(books, filters = {}) {
       !filters.category ||
       filters.category === "전체" ||
       book.category === filters.category;
-    const statusMatches =
-      !filters.loanStatus ||
-      filters.loanStatus === "전체" ||
-      book.loanStatus === filters.loanStatus;
+    const statusMatches = !filters.loanStatus || filters.loanStatus === "전체"
+      ? true
+      : filters.loanStatus === "예약 가능"
+        ? Number(book.availableQuantity || 0) === 0
+        : filters.loanStatus === "대출 가능"
+          ? Number(book.availableQuantity || 0) > 0
+          : filters.loanStatus === "대출 중"
+            ? Number(book.availableQuantity || 0) === 0
+            : book.loanStatus === filters.loanStatus;
     return categoryMatches && statusMatches;
   });
 }
@@ -610,23 +510,24 @@ function createBookCardMarkup(book) {
   const loanedByUser = isLoaned(book.id);
   const readyForUser = isBookReadyForCurrentUser(book.id);
   const isAvailable = (book.availableQuantity ?? (book.loanStatus === "대출 가능" ? 1 : 0)) > 0;
-  const mainAction = user?.role === "admin"
+  const mainAction = isAdminUser(user)
     ? '<button class="card-main-action is-disabled" type="button" disabled>관리자 계정</button>'
     : loanedByUser
-      ? '<button class="card-main-action is-disabled" type="button" disabled>대여 중</button>'
+      ? '<button class="card-main-action is-disabled" type="button" disabled>대출 중</button>'
     : readyForUser || isAvailable
       ? `<button class="card-main-action" type="button" data-action="borrow" data-book-id="${book.id}">${readyForUser ? "예약 도서 대출하기" : "대출하기"}</button>`
       : `<a class="card-main-action reserve-action" href="reserve.html?id=${encodeURIComponent(book.id)}">예약 신청</a>`;
 
+  const detailUrl = createBookDetailUrl(book.id);
   return `
     <article class="book-card" data-book-card="${book.id}">
-      <a class="book-cover-link" href="detail.html?id=${encodeURIComponent(book.id)}" aria-label="${escapeHTML(book.title)} 상세 보기">
+      <a class="book-cover-link" href="${escapeHTML(detailUrl)}" aria-label="${escapeHTML(book.title)} 상세 보기">
         <img class="book-cover" src="${escapeHTML(book.thumbnail)}" alt="${escapeHTML(book.title)} 표지" loading="lazy" onerror="this.outerHTML='<span class=&quot;cover-fallback&quot; aria-label=&quot;표지 이미지 없음&quot;>B</span>'" />
         <span class="book-status status-badge ${getStatusClass(book.loanStatus)}">${escapeHTML(book.loanStatus)}</span>
       </a>
       <div class="book-card-content">
         <span class="book-category">${escapeHTML(book.category.toUpperCase())}</span>
-        <h3><a href="detail.html?id=${encodeURIComponent(book.id)}">${escapeHTML(book.title)}</a></h3>
+        <h3><a href="${escapeHTML(detailUrl)}">${escapeHTML(book.title)}</a></h3>
         <p class="book-author">${escapeHTML(book.author)} · ${escapeHTML(book.publisher)}</p>
         <p class="book-description">${escapeHTML(book.shortDescription)}</p>
         <div class="book-actions">
@@ -779,32 +680,42 @@ async function loginUser(identifier, password) {
     return { success: false, message: "회원 서비스에 연결할 수 없습니다." };
   }
 
-  let loginEmail = normalizedIdentifier;
-  if (!normalizedIdentifier.includes("@")) {
-    const { data: resolvedEmail, error: resolveError } = await window.btlrSupabase
-      .rpc("resolve_login_email", { input_login_id: normalizedIdentifier });
-    if (resolveError || !resolvedEmail) {
-      return { success: false, message: "아이디 또는 비밀번호가 올바르지 않습니다." };
-    }
-    loginEmail = resolvedEmail;
+  let response;
+  try {
+    response = await fetch("/api/login-by-id", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier: normalizedIdentifier, password: String(password) }),
+    });
+  } catch {
+    return { success: false, message: "로그인 서버에 연결할 수 없습니다. 네트워크 연결을 확인해 주세요." };
   }
 
-  const { data, error } = await window.btlrSupabase.auth.signInWithPassword({
-    email: loginEmail,
-    password: String(password),
-  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = response.status === 401
+      ? "아이디·이메일 또는 비밀번호가 올바르지 않습니다."
+      : response.status === 429
+        ? "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요."
+        : response.status === 404 || response.status === 405
+          ? "로그인 API가 아직 배포되지 않았거나 연결 설정이 올바르지 않습니다. 관리자에게 문의해 주세요."
+        : response.status >= 500
+          ? "로그인 서버 설정을 확인할 수 없습니다. 관리자에게 문의해 주세요."
+          : (result.message || "로그인 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+    return { success: false, message };
+  }
 
-  if (error) {
-    const normalizedError = error.message.toLocaleLowerCase();
-    const message = normalizedError.includes("email not confirmed")
-      ? "이메일 인증을 완료한 후 로그인해 주세요."
-      : normalizedError.includes("invalid login credentials")
-        ? "아이디·이메일 또는 비밀번호가 올바르지 않습니다."
-        : "로그인 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.";
-    return {
-      success: false,
-      message,
-    };
+  const accessToken = result.session?.access_token;
+  const refreshToken = result.session?.refresh_token;
+  if (!accessToken || !refreshToken) {
+    return { success: false, message: "로그인 응답에 필요한 세션 정보가 없습니다. 서버 설정을 확인해 주세요." };
+  }
+  const { data, error } = await window.btlrSupabase.auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
+  if (error || !data?.user) {
+    return { success: false, message: "로그인 세션을 저장하지 못했습니다. 다시 시도해 주세요." };
   }
 
   await loadCurrentUser(data.user);
@@ -813,14 +724,20 @@ async function loginUser(identifier, password) {
 
 async function logoutUser() {
   if (window.btlrSupabase) {
-    await window.btlrSupabase.auth.signOut();
+    const { error } = await window.btlrSupabase.auth.signOut();
+    if (error) return { success: false, message: getFriendlyServiceError(error, "로그아웃하지 못했습니다.") };
   }
   currentUserCache = null;
   sessionStorage.removeItem(HEADER_USER_CACHE_KEY);
+  return { success: true, message: "로그아웃했습니다." };
 }
 
 function getCurrentUser() {
   return currentUserCache;
+}
+
+function isAdminUser(user = getCurrentUser()) {
+  return user?.role === "admin" || user?.role === "owner";
 }
 
 function getCachedHeaderUser() {
@@ -896,42 +813,100 @@ function requireLogin() {
 }
 
 function getFavorites() {
-  return getStoredArray(STORAGE_KEYS.favorites);
+  return [...favoritesCache];
 }
 
-function saveFavorites(favorites) {
-  setStoredArray(STORAGE_KEYS.favorites, favorites);
+async function loadFavoritesFromSupabase() {
+  const user = getCurrentUser();
+  favoritesCache = [];
+  favoritesLoadError = "";
+  if (!user) {
+    favoritesLoadState = "empty";
+    return { success: true };
+  }
+  if (!window.btlrSupabase) {
+    favoritesLoadState = "error";
+    favoritesLoadError = "찜 서비스에 연결할 수 없습니다.";
+    return { success: false, message: favoritesLoadError };
+  }
+  favoritesLoadState = "loading";
+
+  const { data, error } = await window.btlrSupabase
+    .from("favorites")
+    .select("user_id, book_id, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+  if (error) {
+    favoritesLoadState = "error";
+    favoritesLoadError = getFriendlyServiceError(error, "찜 목록을 불러오지 못했습니다.");
+    return { success: false, message: favoritesLoadError };
+  }
+
+  favoritesCache = (data || []).map((favorite) => ({
+    id: `${favorite.user_id}:${favorite.book_id}`,
+    userId: favorite.user_id,
+    bookId: favorite.book_id,
+    createdAt: favorite.created_at,
+  }));
+
+  const legacyFavorites = getStoredArray(STORAGE_KEYS.favorites)
+    .filter((favorite) => favorite?.userId === user.id && favorite?.bookId)
+    .filter((favorite) => !favoritesCache.some((saved) => saved.bookId === favorite.bookId));
+  if (legacyFavorites.length) {
+    const { error: migrationError } = await window.btlrSupabase
+      .from("favorites")
+      .upsert(legacyFavorites.map((favorite) => ({
+        user_id: user.id,
+        book_id: favorite.bookId,
+        created_at: favorite.createdAt || new Date().toISOString(),
+      })), { onConflict: "user_id,book_id", ignoreDuplicates: true });
+    if (!migrationError) {
+      legacyFavorites.forEach((favorite) => favoritesCache.push({
+        id: `${user.id}:${favorite.bookId}`,
+        userId: user.id,
+        bookId: favorite.bookId,
+        createdAt: favorite.createdAt || new Date().toISOString(),
+      }));
+      localStorage.removeItem(STORAGE_KEYS.favorites);
+    }
+  } else if (localStorage.getItem(STORAGE_KEYS.favorites)) {
+    localStorage.removeItem(STORAGE_KEYS.favorites);
+  }
+  favoritesLoadState = favoritesCache.length ? "success" : "empty";
+  return { success: true };
 }
 
-function addFavorite(bookId) {
+async function addFavorite(bookId) {
   const user = requireLogin();
   if (!user) return { success: false, redirected: true };
-  const favorites = getFavorites();
-  if (
-    favorites.some(
-      (favorite) => favorite.userId === user.id && favorite.bookId === bookId,
-    )
-  ) {
+  if (!window.btlrSupabase) return { success: false, message: "찜 서비스에 연결할 수 없습니다." };
+  if (isFavorite(bookId)) {
     return { success: false, message: "이미 찜한 도서입니다." };
   }
-  favorites.push({
-    id: generateId("fav"),
-    userId: user.id,
-    bookId,
-    createdAt: new Date().toISOString(),
+  const createdAt = new Date().toISOString();
+  const { error } = await window.btlrSupabase.from("favorites").insert({
+    user_id: user.id,
+    book_id: bookId,
+    created_at: createdAt,
   });
-  saveFavorites(favorites);
+  if (error) return { success: false, message: getFriendlyServiceError(error, "찜한 도서에 추가하지 못했습니다.") };
+  favoritesCache.unshift({ id: `${user.id}:${bookId}`, userId: user.id, bookId, createdAt });
   return { success: true, message: "찜한 도서에 추가했습니다." };
 }
 
-function removeFavorite(bookId) {
+async function removeFavorite(bookId) {
   const user = getCurrentUser();
   if (!user) return { success: false, message: "로그인이 필요합니다." };
-  const nextFavorites = getFavorites().filter(
-    (favorite) =>
-      !(favorite.userId === user.id && favorite.bookId === bookId),
+  if (!window.btlrSupabase) return { success: false, message: "찜 서비스에 연결할 수 없습니다." };
+  const { error } = await window.btlrSupabase
+    .from("favorites")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("book_id", bookId);
+  if (error) return { success: false, message: getFriendlyServiceError(error, "찜을 취소하지 못했습니다.") };
+  favoritesCache = favoritesCache.filter(
+    (favorite) => !(favorite.userId === user.id && favorite.bookId === bookId),
   );
-  saveFavorites(nextFavorites);
   return { success: true, message: "찜을 취소했습니다." };
 }
 
@@ -949,10 +924,19 @@ function getLoans() {
 
 async function loadUserLoansFromSupabase() {
   const user = getCurrentUser();
-  if (!user || !window.btlrSupabase) {
+  loansLoadError = "";
+  if (!user) {
     loansCache = [];
+    loansLoadState = "empty";
     return;
   }
+  if (!window.btlrSupabase) {
+    loansCache = [];
+    loansLoadState = "error";
+    loansLoadError = "대출 서비스에 연결할 수 없습니다.";
+    return;
+  }
+  loansLoadState = "loading";
   const { data, error } = await window.btlrSupabase
     .from("book_loans")
     .select("id, user_id, book_id, status, borrowed_at, due_at")
@@ -960,22 +944,25 @@ async function loadUserLoansFromSupabase() {
     .order("borrowed_at", { ascending: false });
   if (error) {
     loansCache = [];
+    loansLoadState = "error";
+    loansLoadError = getFriendlyServiceError(error, "대출 목록을 불러오지 못했습니다.");
     return;
   }
   loansCache = (data || []).map((loan) => ({
     id: loan.id,
     userId: loan.user_id,
     bookId: loan.book_id,
-    loanStatus: "대여 중",
+    loanStatus: "대출 중",
     borrowedAt: loan.borrowed_at,
     dueDate: loan.due_at,
   }));
+  loansLoadState = loansCache.length ? "success" : "empty";
 }
 
 async function borrowBook(bookId) {
   const user = requireLogin();
   if (!user) return { success: false, redirected: true };
-  if (user.role === "admin") {
+  if (isAdminUser(user)) {
     return { success: false, message: "관리자 계정은 도서를 대출할 수 없습니다." };
   }
   const book = getBookById(bookId);
@@ -985,13 +972,13 @@ async function borrowBook(bookId) {
     return { success: false, message: "현재 바로 대출할 수 없는 도서입니다." };
   }
   if (isLoaned(bookId)) {
-    return { success: false, message: "이미 대여 목록에 있는 도서입니다." };
+    return { success: false, message: "이미 대출 목록에 있는 도서입니다." };
   }
 
   const { data, error } = await window.btlrSupabase.rpc("borrow_book", {
     target_book_id: bookId,
   });
-  if (error) return { success: false, message: error.message };
+  if (error) return { success: false, message: getFriendlyServiceError(error, "도서를 대출하지 못했습니다.") };
   await Promise.all([
     loadUserLoansFromSupabase(),
     loadUserReservationsFromSupabase(),
@@ -1010,11 +997,11 @@ async function removeLoan(loanId) {
   const exists = getLoans().some(
     (loan) => loan.id === loanId && loan.userId === user.id,
   );
-  if (!exists) return { success: false, message: "대여 정보를 찾을 수 없습니다." };
+  if (!exists) return { success: false, message: "대출 정보를 찾을 수 없습니다." };
   const { error } = await window.btlrSupabase.rpc("return_book", {
     target_loan_id: loanId,
   });
-  if (error) return { success: false, message: error.message };
+  if (error) return { success: false, message: getFriendlyServiceError(error, "도서를 반납하지 못했습니다.") };
   await Promise.all([loadUserLoansFromSupabase(), loadBooksFromSupabase()]);
   await loadNotifications();
   return { success: true, message: "도서를 반납했습니다." };
@@ -1034,10 +1021,19 @@ function getReservations() {
 
 async function loadUserReservationsFromSupabase() {
   const user = getCurrentUser();
-  if (!user || !window.btlrSupabase) {
+  reservationsLoadError = "";
+  if (!user) {
     reservationsCache = [];
+    reservationsLoadState = "empty";
     return;
   }
+  if (!window.btlrSupabase) {
+    reservationsCache = [];
+    reservationsLoadState = "error";
+    reservationsLoadError = "도서 예약 서비스에 연결할 수 없습니다.";
+    return;
+  }
+  reservationsLoadState = "loading";
 
   let { data, error } = await window.btlrSupabase.rpc("list_my_book_reservations");
   if (error && /function|schema cache/i.test(error.message || "")) {
@@ -1053,6 +1049,8 @@ async function loadUserReservationsFromSupabase() {
 
   if (error) {
     reservationsCache = [];
+    reservationsLoadState = "error";
+    reservationsLoadError = getFriendlyServiceError(error, "도서 예약 목록을 불러오지 못했습니다.");
     return;
   }
 
@@ -1064,14 +1062,16 @@ async function loadUserReservationsFromSupabase() {
     reservationStatus: reservation.status === "ready" ? "대출 가능" : "예약 대기",
     queuePosition: Number(reservation.queue_position) || 0,
     readyAt: reservation.ready_at || null,
+    readyExpiresAt: reservation.ready_expires_at || null,
     createdAt: reservation.created_at,
   }));
+  reservationsLoadState = reservationsCache.length ? "success" : "empty";
 }
 
 async function reserveBook(bookId) {
   const user = requireLogin();
   if (!user) return { success: false, redirected: true };
-  if (user.role === "admin") {
+  if (isAdminUser(user)) {
     return { success: false, message: "관리자 계정은 도서를 예약할 수 없습니다." };
   }
   const book = getBookById(bookId);
@@ -1092,7 +1092,7 @@ async function reserveBook(bookId) {
   const { error } = await window.btlrSupabase.rpc("reserve_book", {
     target_book_id: bookId,
   });
-  if (error) return { success: false, message: error.message };
+  if (error) return { success: false, message: getFriendlyServiceError(error, "도서를 예약하지 못했습니다.") };
   await Promise.all([loadUserReservationsFromSupabase(), loadBooksFromSupabase()]);
   await loadNotifications();
   return {
@@ -1115,7 +1115,7 @@ async function cancelReservation(reservationId) {
   const { error } = await window.btlrSupabase.rpc("cancel_book_reservation", {
     target_reservation_id: reservationId,
   });
-  if (error) return { success: false, message: error.message };
+  if (error) return { success: false, message: getFriendlyServiceError(error, "예약을 취소하지 못했습니다.") };
   await Promise.all([loadUserReservationsFromSupabase(), loadBooksFromSupabase()]);
   await loadNotifications();
   return { success: true, message: "예약을 취소했습니다." };
@@ -1147,7 +1147,7 @@ function isBookReadyForCurrentUser(bookId) {
 
 function renderAuthArea() {
   const user = getCurrentUser();
-  document.body?.classList.toggle("has-admin-nav", user?.role === "admin");
+  document.body?.classList.toggle("has-admin-nav", isAdminUser(user));
   document.querySelectorAll("[data-auth-area]").forEach((container) => {
     if (user) {
       container.innerHTML = `
@@ -1205,7 +1205,7 @@ function renderAuthArea() {
       { href: "admin-inquiries.html", label: "문의 관리", section: "inquiries", icon: "✉" },
     ];
 
-    if (user?.role === "admin") {
+    if (isAdminUser(user)) {
       navigation.querySelectorAll(":scope > .admin-nav-link").forEach((link) => link.remove());
       let adminMenu = navigation.querySelector(".admin-nav-menu");
       if (!adminMenu) {
@@ -1255,6 +1255,7 @@ function getNotificationIcon(type) {
   return {
     book_ready: "B",
     reading_room: "⌑",
+    loan_overdue: "!",
     loan_due: "↗",
     favorite_available: "♡",
     admin_inquiry: "✉",
@@ -1268,6 +1269,7 @@ function getNotificationPriority(type) {
   return {
     reading_room: 100,
     book_ready: 90,
+    loan_overdue: 85,
     loan_due: 70,
     admin_inquiry: 65,
     admin_book_request: 60,
@@ -1275,6 +1277,19 @@ function getNotificationPriority(type) {
     book_request_result: 50,
     favorite_available: 30,
   }[type] || 10;
+}
+
+function getReadingRoomDateTime(date, time) {
+  const normalizedDate = String(date || "").slice(0, 10);
+  const normalizedTime = formatRoomTime(time);
+  if (!normalizedDate || normalizedTime === "-") return null;
+  const value = new Date(`${normalizedDate}T${normalizedTime}:00+09:00`);
+  return Number.isNaN(value.getTime()) ? null : value;
+}
+
+function isReadingRoomReservationUpcoming(reservation, now = Date.now()) {
+  const endAt = getReadingRoomDateTime(reservation.reservation_date || reservation.reservationDate, reservation.end_time || reservation.endTime);
+  return Boolean(endAt && endAt.getTime() > now);
 }
 
 function formatNotificationTime(value) {
@@ -1315,44 +1330,58 @@ function ensureNotificationCenter() {
 
 async function getVirtualNotifications() {
   const user = getCurrentUser();
-  if (!user || user.role === "admin") return [];
+  if (!user || isAdminUser(user)) return [];
   const virtualNotifications = [];
   const now = Date.now();
 
-  const dueLoan = getLoans()
-    .filter((loan) => loan.userId === user.id && new Date(loan.dueDate).getTime() > now)
-    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
-  if (dueLoan) {
-    const dueDifference = new Date(dueLoan.dueDate).getTime() - now;
-    if (dueDifference <= 3 * 24 * 60 * 60 * 1000) {
-      const book = getBookById(dueLoan.bookId);
+  getLoans()
+    .filter((loan) => loan.userId === user.id)
+    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+    .forEach((loan) => {
+      const dueAt = new Date(loan.dueDate).getTime();
+      if (!Number.isFinite(dueAt) || dueAt - now > 3 * 24 * 60 * 60 * 1000) return;
+      const book = getBookById(loan.bookId);
+      const overdue = dueAt < now;
       virtualNotifications.push({
-        id: `loan-due-${dueLoan.id}`,
-        type: "loan_due",
-        title: "도서 반납일이 가까워요",
-        message: `${book?.title || "대출 도서"}의 반납 예정일은 ${formatDate(dueLoan.dueDate)}입니다.`,
+        id: `${overdue ? "loan-overdue" : "loan-due"}-${loan.id}`,
+        type: overdue ? "loan_overdue" : "loan_due",
+        title: overdue ? "도서 반납일이 지났어요" : "도서 반납일이 가까워요",
+        message: `${book?.title || "대출 도서"}의 반납 예정일은 ${formatDate(loan.dueDate)}입니다.${overdue ? " 가능한 빨리 반납해 주세요." : ""}`,
         link: "mypage.html#loans-section",
-        created_at: dueLoan.dueDate,
+        created_at: loan.dueDate,
         isVirtual: true,
       });
-    }
-  }
+    });
 
-  const favoriteBook = getFavorites()
+  getReservations()
+    .filter((reservation) => reservation.userId === user.id && reservation.status === "ready")
+    .forEach((reservation) => {
+      const book = getBookById(reservation.bookId);
+      virtualNotifications.push({
+        id: `book-ready-${reservation.id}`,
+        type: "book_ready",
+        title: "예약 도서를 대출할 수 있어요",
+        message: `${book?.title || "예약 도서"}이(가) 준비되었습니다.${reservation.readyExpiresAt ? ` ${formatDate(reservation.readyExpiresAt)}까지` : " 보관 기한 안에"} 대출해 주세요.`,
+        link: `detail.html?id=${encodeURIComponent(reservation.bookId)}`,
+        created_at: reservation.readyAt || reservation.createdAt,
+        isVirtual: true,
+      });
+    });
+
+  getFavorites()
     .filter((favorite) => favorite.userId === user.id)
     .map((favorite) => getBookById(favorite.bookId))
-    .find((book) => book && book.availableQuantity > 0 && !isLoaned(book.id));
-  if (favoriteBook) {
-    virtualNotifications.push({
-      id: `favorite-available-${favoriteBook.id}`,
+    .filter((book) => book && book.availableQuantity > 0 && !isLoaned(book.id))
+    .slice(0, 10)
+    .forEach((book) => virtualNotifications.push({
+      id: `favorite-available-${book.id}`,
       type: "favorite_available",
       title: "찜한 도서를 빌릴 수 있어요",
-      message: `${favoriteBook.title}이(가) 현재 대출 가능합니다.`,
-      link: `detail.html?id=${encodeURIComponent(favoriteBook.id)}`,
+      message: `${book.title}이(가) 현재 대출 가능합니다.`,
+      link: `detail.html?id=${encodeURIComponent(book.id)}`,
       created_at: new Date().toISOString(),
       isVirtual: true,
-    });
-  }
+    }));
 
   if (window.btlrSupabase) {
     const today = getLocalDateInputValue();
@@ -1364,26 +1393,21 @@ async function getVirtualNotifications() {
       .gte("reservation_date", today)
       .order("reservation_date", { ascending: true })
       .order("start_time", { ascending: true });
-    const reservation = data?.[0];
-    if (reservation) {
-      const startAt = new Date(`${reservation.reservation_date}T${formatRoomTime(reservation.start_time)}:00+09:00`);
-      const minutesUntilStart = Math.ceil((startAt.getTime() - now) / 60000);
-      if (minutesUntilStart > 0 && minutesUntilStart <= 30) {
-        const sameGroupSeats = (data || [])
-          .filter((row) => row.reservation_group_id === reservation.reservation_group_id)
-          .map((row) => Number(row.seat_number))
-          .sort((a, b) => a - b);
-        virtualNotifications.push({
-          id: `room-soon-${reservation.reservation_group_id}`,
-          type: "reading_room",
-          title: "열람실 이용 시간이 곧 시작돼요",
-          message: `${minutesUntilStart}분 후 ${sameGroupSeats.map((seat) => `${seat}번`).join(", ")} 좌석 예약이 시작됩니다.`,
-          link: "mypage.html#reading-room-section",
-          created_at: new Date().toISOString(),
-          isVirtual: true,
-        });
-      }
-    }
+    const groups = groupReadingRoomReservations((data || []).filter((reservation) => isReadingRoomReservationUpcoming(reservation, now)));
+    groups.forEach((reservation) => {
+      const startAt = getReadingRoomDateTime(reservation.reservationDate, reservation.startTime);
+      const minutesUntilStart = startAt ? Math.ceil((startAt.getTime() - now) / 60000) : -1;
+      if (minutesUntilStart <= 0 || minutesUntilStart > 30) return;
+      virtualNotifications.push({
+        id: `room-soon-${reservation.groupId}`,
+        type: "reading_room",
+        title: "열람실 이용 시간이 곧 시작돼요",
+        message: `${minutesUntilStart}분 후 ${reservation.seatNumbers.map((seat) => `${seat}번`).join(", ")} 좌석 예약이 시작됩니다.`,
+        link: "mypage.html#reading-room-section",
+        created_at: startAt.toISOString(),
+        isVirtual: true,
+      });
+    });
   }
 
   const readVirtualIds = new Set(getStoredArray(`btlr_read_virtual_notifications_${user.id}`));
@@ -1599,15 +1623,24 @@ function handleGlobalActions() {
     let result = null;
 
     if (action === "logout") {
-      await logoutUser();
+      const logoutResult = await logoutUser();
+      if (!logoutResult.success) {
+        showToast(logoutResult.message);
+        return;
+      }
       window.location.href = "index.html";
       return;
     }
 
     if (action === "favorite") {
-      result = isFavorite(bookId)
-        ? removeFavorite(bookId)
-        : addFavorite(bookId);
+      trigger.disabled = true;
+      try {
+        result = await (isFavorite(bookId)
+          ? removeFavorite(bookId)
+          : addFavorite(bookId));
+      } finally {
+        trigger.disabled = false;
+      }
     }
 
     if (action === "borrow") {
@@ -1615,7 +1648,12 @@ function handleGlobalActions() {
     }
 
     if (action === "remove-favorite") {
-      result = removeFavorite(bookId);
+      trigger.disabled = true;
+      try {
+        result = await removeFavorite(bookId);
+      } finally {
+        trigger.disabled = false;
+      }
     }
 
     if (action === "remove-loan") {
@@ -1648,13 +1686,25 @@ function refreshRenderedCards() {
 }
 
 function initHomePage() {
-  const featuredBooks = [
+  const preferredFeaturedBooks = [
     getBookById("book-001"),
     getBookById("book-008"),
     getBookById("book-010"),
     getBookById("book-016"),
   ].filter(Boolean);
+  const featuredBooks = [...preferredFeaturedBooks];
+  getBooks().forEach((book) => {
+    if (featuredBooks.length < 4 && !featuredBooks.some((featured) => featured.id === book.id)) {
+      featuredBooks.push(book);
+    }
+  });
   renderBookCards(featuredBooks, document.getElementById("featured-books"));
+  const featuredTarget = document.getElementById("featured-books");
+  if (featuredTarget && booksLoadState === "error") {
+    featuredTarget.innerHTML = `<div class="request-empty compact"><strong>추천 도서를 불러오지 못했습니다.</strong><p>${escapeHTML(booksLoadError)}</p></div>`;
+  } else if (featuredTarget && booksLoadState === "empty") {
+    featuredTarget.innerHTML = '<div class="request-empty compact"><strong>아직 등록된 도서가 없습니다.</strong><p>도서가 등록되면 이곳에 추천 도서가 표시됩니다.</p></div>';
+  }
 
   const availableCount = document.getElementById("available-count");
   if (availableCount) {
@@ -1705,7 +1755,7 @@ async function initHomeBookRequest() {
     return;
   }
 
-  if (user.role === "admin") {
+  if (isAdminUser(user)) {
     actionPanel.innerHTML = `
       <div class="home-request-gate">
         <strong>회원의 도서 추가 요청을 확인하세요.</strong>
@@ -1723,8 +1773,10 @@ async function initHomeBookRequest() {
 
 function initSearchPage() {
   let query = (getQueryParam("q") || "").trim();
+  let currentPage = Math.max(Number.parseInt(getQueryParam("page") || "1", 10) || 1, 1);
   const categoryParam = getQueryParam("category") || "전체";
   const statusParam = getQueryParam("status") || "전체";
+  const sortParam = getQueryParam("sort") || "default";
   const categoryFilter = document.getElementById("category-filter");
   const sortFilter = document.getElementById("sort-filter");
   const resetButton = document.getElementById("reset-filters");
@@ -1733,6 +1785,9 @@ function initSearchPage() {
 
   if (headerInput) headerInput.value = query;
   populateCategoryFilter(categoryFilter, categoryParam);
+  if (sortFilter && [...sortFilter.options].some((option) => option.value === sortParam)) {
+    sortFilter.value = sortParam;
+  }
 
   const statusRadio = document.querySelector(
     `input[name="loan-status"][value="${CSS.escape(statusParam)}"]`,
@@ -1747,6 +1802,19 @@ function initSearchPage() {
       document.querySelector('input[name="loan-status"]:checked')?.value ||
       "전체";
     const sortOption = sortFilter?.value || "default";
+
+    const stateUrl = new URL(window.location.href);
+    if (query) stateUrl.searchParams.set("q", query);
+    else stateUrl.searchParams.delete("q");
+    if (category === "전체") stateUrl.searchParams.delete("category");
+    else stateUrl.searchParams.set("category", category);
+    if (loanStatus === "전체") stateUrl.searchParams.delete("status");
+    else stateUrl.searchParams.set("status", loanStatus);
+    if (sortOption === "default") stateUrl.searchParams.delete("sort");
+    else stateUrl.searchParams.set("sort", sortOption);
+    if (currentPage === 1) stateUrl.searchParams.delete("page");
+    else stateUrl.searchParams.set("page", String(currentPage));
+    window.history.replaceState({}, "", `${stateUrl.pathname}${stateUrl.search}${stateUrl.hash}`);
 
     let books = searchBooks(query, getBooks());
     books = filterBooks(books, { category, loanStatus });
@@ -1768,9 +1836,47 @@ function initSearchPage() {
         ? `<span>검색어 “${escapeHTML(query)}”와 선택한 조건을 함께 적용 중입니다.</span><a href="search.html">검색어 지우고 전체 도서 보기</a>`
         : "";
     }
+    let pagination = document.getElementById("search-pagination");
+    if (!pagination && results) {
+      pagination = document.createElement("nav");
+      pagination.id = "search-pagination";
+      pagination.className = "admin-pagination search-pagination";
+      pagination.setAttribute("aria-label", "도서 검색 결과 페이지");
+      results.insertAdjacentElement("afterend", pagination);
+    }
+
+    if (booksLoadState === "error") {
+      if (results) {
+        results.hidden = false;
+        results.innerHTML = `<div class="request-empty"><strong>도서 목록을 불러오지 못했습니다.</strong><p>${escapeHTML(booksLoadError)}</p><button class="button button-secondary" type="button" data-retry-books>다시 시도</button></div>`;
+      }
+      if (empty) empty.hidden = true;
+      if (pagination) pagination.hidden = true;
+      return;
+    }
+
+    const totalPages = Math.max(Math.ceil(books.length / SEARCH_PAGE_SIZE), 1);
+    const requestedPage = currentPage;
+    currentPage = Math.min(currentPage, totalPages);
+    if (currentPage !== requestedPage) {
+      if (currentPage === 1) stateUrl.searchParams.delete("page");
+      else stateUrl.searchParams.set("page", String(currentPage));
+      window.history.replaceState({}, "", `${stateUrl.pathname}${stateUrl.search}${stateUrl.hash}`);
+    }
+    const pageBooks = books.slice((currentPage - 1) * SEARCH_PAGE_SIZE, currentPage * SEARCH_PAGE_SIZE);
     if (results) results.hidden = books.length === 0;
     if (empty) empty.hidden = books.length !== 0;
-    renderBookCards(books, results);
+    renderBookCards(pageBooks, results);
+
+    if (pagination) {
+      pagination.hidden = totalPages <= 1;
+      pagination.innerHTML = totalPages <= 1 ? "" : `
+        <button type="button" data-search-page="${currentPage - 1}" ${currentPage === 1 ? "disabled" : ""}>이전</button>
+        ${getAdminPaginationItems(currentPage, totalPages).map((item) => item === "ellipsis"
+          ? '<span class="admin-pagination-ellipsis" aria-hidden="true">…</span>'
+          : `<button type="button" data-search-page="${item}" class="${item === currentPage ? "active" : ""}" ${item === currentPage ? 'aria-current="page"' : ""}>${item}</button>`).join("")}
+        <button type="button" data-search-page="${currentPage + 1}" ${currentPage === totalPages ? "disabled" : ""}>다음</button>`;
+    }
   };
 
   categoryFilter?.addEventListener("change", () => {
@@ -1780,6 +1886,7 @@ function initSearchPage() {
       query = "";
       if (headerInput) headerInput.value = "";
     }
+    currentPage = 1;
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.delete("q");
     if (categoryFilter.value === "전체") nextUrl.searchParams.delete("category");
@@ -1787,10 +1894,35 @@ function initSearchPage() {
     window.history.replaceState({}, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
     updateResults();
   });
-  sortFilter?.addEventListener("change", updateResults);
+  sortFilter?.addEventListener("change", () => {
+    currentPage = 1;
+    updateResults();
+  });
   document
     .querySelectorAll('input[name="loan-status"]')
-    .forEach((radio) => radio.addEventListener("change", updateResults));
+    .forEach((radio) => radio.addEventListener("change", () => {
+      currentPage = 1;
+      updateResults();
+    }));
+
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-search-page]");
+    if (!button || button.disabled) return;
+    currentPage = Math.max(Number(button.dataset.searchPage) || 1, 1);
+    const nextUrl = new URL(window.location.href);
+    if (currentPage === 1) nextUrl.searchParams.delete("page");
+    else nextUrl.searchParams.set("page", String(currentPage));
+    window.history.replaceState({}, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+    updateResults();
+    document.getElementById("search-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  document.getElementById("search-results")?.addEventListener("click", async (event) => {
+    if (!event.target.closest("[data-retry-books]")) return;
+    await loadBooksFromSupabase();
+    populateCategoryFilter(categoryFilter, categoryFilter?.value || "전체");
+    updateResults();
+  });
 
   const resetFilters = () => {
     if (query) {
@@ -1803,6 +1935,7 @@ function initSearchPage() {
     );
     if (allStatus) allStatus.checked = true;
     if (sortFilter) sortFilter.value = "default";
+    currentPage = 1;
     updateResults();
   };
 
@@ -1846,6 +1979,10 @@ function populateCategoryFilter(select, selectedCategory = "전체") {
 function initDetailPage() {
   const container = document.getElementById("book-detail");
   if (!container) return;
+  if (booksLoadState === "error") {
+    container.innerHTML = `<div class="not-found"><span>!</span><h1>도서 정보를 불러오지 못했어요</h1><p>${escapeHTML(booksLoadError)}</p><a class="button button-primary" href="${escapeHTML(getCurrentRelativeUrl())}">다시 시도</a></div>`;
+    return;
+  }
   const book = getBookById(getQueryParam("id"));
 
   if (!book) {
@@ -1864,10 +2001,10 @@ function initDetailPage() {
   const favorite = isFavorite(book.id);
   const loaned = isLoaned(book.id);
   const readyForUser = isBookReadyForCurrentUser(book.id);
-  const actionButton = getCurrentUser()?.role === "admin"
+  const actionButton = isAdminUser()
     ? '<button class="button button-primary is-disabled" type="button" disabled>관리자 계정은 대출할 수 없습니다</button>'
     : loaned
-      ? '<button class="button button-primary is-disabled" type="button" disabled>현재 대여 중</button>'
+      ? '<button class="button button-primary is-disabled" type="button" disabled>현재 대출 중</button>'
     : readyForUser || (book.availableQuantity ?? (book.loanStatus === "대출 가능" ? 1 : 0)) > 0
       ? `<button class="button button-primary" type="button" data-action="borrow" data-book-id="${book.id}">${readyForUser ? "예약 도서 대출하기" : "대출하기"}</button>`
       : `<a class="button button-primary" href="reserve.html?id=${encodeURIComponent(book.id)}">예약 신청</a>`;
@@ -1894,12 +2031,11 @@ function initDetailPage() {
           <div><dt>카테고리</dt><dd>${escapeHTML(book.category)}</dd></div>
           <div><dt>대출 가능 수량</dt><dd>${book.availableQuantity ?? 1} / ${book.totalQuantity ?? 1}권</dd></div>
         </dl>
-        ${book.returnDate ? `<p class="return-notice">예상 반납일 ${formatDate(book.returnDate)} · 반납 후 순차적으로 이용할 수 있습니다.</p>` : ""}
         <div class="detail-actions">
           <button class="button button-secondary favorite-detail ${favorite ? "active" : ""}" type="button" data-action="favorite" data-book-id="${book.id}" aria-pressed="${favorite}">${favorite ? "♥ 찜 취소" : "♡ 찜하기"}</button>
           ${actionButton}
         </div>
-        <a class="back-link" href="search.html">← 검색 결과로 돌아가기</a>
+        <a class="back-link" href="${escapeHTML(getBookDetailReturnUrl())}">← 검색 결과로 돌아가기</a>
       </div>
     </article>
   `;
@@ -1940,6 +2076,10 @@ function initReservePage() {
 
   const container = document.getElementById("reserve-content");
   if (!container) return;
+  if (booksLoadState === "error") {
+    container.innerHTML = `<div class="not-found"><span>!</span><h1>도서 정보를 불러오지 못했어요</h1><p>${escapeHTML(booksLoadError)}</p><a class="button button-primary" href="${escapeHTML(getCurrentRelativeUrl())}">다시 시도</a></div>`;
+    return;
+  }
   const book = getBookById(getQueryParam("id"));
 
   if (!book) {
@@ -1956,7 +2096,7 @@ function initReservePage() {
   const alreadyReserved = isReserved(book.id);
   const readyReservation = getReadyReservation(book.id);
   const loanedByUser = isLoaned(book.id);
-  const isAdmin = getCurrentUser()?.role === "admin";
+  const isAdmin = isAdminUser();
   const reservationLimitReached = getReservations().filter(
     (reservation) => reservation.userId === user.id,
   ).length >= MAX_ACTIVE_BOOK_RESERVATIONS;
@@ -1974,7 +2114,7 @@ function initReservePage() {
           </div>
         </div>
         <dl class="reserve-info-list">
-          <div><dt>예상 반납일</dt><dd>${book.returnDate ? formatDate(book.returnDate) : "현재 대출 가능"}</dd></div>
+          <div><dt>현재 상태</dt><dd>${escapeHTML(book.loanStatus)}</dd></div>
         </dl>
       </article>
       <aside class="reserve-guide">
@@ -2066,7 +2206,8 @@ function initSignupPage() {
 }
 
 function initLoginPage() {
-  if (getCurrentUser()) {
+  const recoveryMode = getQueryParam("mode") === "reset" || /(?:^|[&#])type=recovery(?:&|$)/.test(window.location.hash);
+  if (getCurrentUser() && !recoveryMode) {
     window.location.href = "index.html";
     return;
   }
@@ -2075,6 +2216,8 @@ function initLoginPage() {
   const message = document.getElementById("login-message");
   const notice = sessionStorage.getItem("btlr_login_notice");
   const signupNotice = sessionStorage.getItem("btlr_signup_notice");
+
+  initPasswordRecovery(recoveryMode);
 
   if (getQueryParam("joined") === "1" && message) {
     message.textContent = signupNotice || "회원가입이 완료되었습니다. 로그인해 주세요.";
@@ -2107,6 +2250,98 @@ function initLoginPage() {
   });
 }
 
+function initPasswordRecovery(recoveryMode = false) {
+  const requestForm = document.getElementById("password-reset-form");
+  const requestMessage = document.getElementById("password-reset-message");
+
+  requestForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!window.btlrSupabase) {
+      if (requestMessage) requestMessage.textContent = "회원 서비스에 연결할 수 없습니다.";
+      return;
+    }
+    const email = String(requestForm.elements.email?.value || document.getElementById("password-reset-email")?.value || "")
+      .trim()
+      .toLocaleLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (requestMessage) requestMessage.textContent = "가입할 때 사용한 이메일을 정확히 입력해 주세요.";
+      return;
+    }
+    const button = requestForm.querySelector('button[type="submit"]');
+    if (button) button.disabled = true;
+    try {
+      const redirectTo = `${window.location.origin}${window.location.pathname}?mode=reset`;
+      const { error } = await window.btlrSupabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (requestMessage) {
+        requestMessage.textContent = error
+          ? getFriendlyServiceError(error, "비밀번호 재설정 메일을 보내지 못했습니다.")
+          : "입력한 이메일로 비밀번호 재설정 링크를 보냈습니다. 메일함을 확인해 주세요.";
+        requestMessage.classList.toggle("success", !error);
+      }
+    } catch (error) {
+      if (requestMessage) {
+        requestMessage.textContent = getFriendlyServiceError(error, "비밀번호 재설정 메일을 보내지 못했습니다.");
+        requestMessage.classList.remove("success");
+      }
+    } finally {
+      if (button) button.disabled = false;
+    }
+  });
+
+  const showUpdateForm = () => {
+    if (document.getElementById("password-recovery-update-form")) return;
+    const container = requestForm?.parentElement || document.querySelector(".auth-card") || document.querySelector("main");
+    if (!container) return;
+    const updateForm = document.createElement("form");
+    updateForm.id = "password-recovery-update-form";
+    updateForm.className = "auth-form password-recovery-update-form";
+    updateForm.innerHTML = `
+      <div><label for="recovery-new-password">새 비밀번호</label><input id="recovery-new-password" name="password" type="password" minlength="8" autocomplete="new-password" required /></div>
+      <div><label for="recovery-new-password-confirm">새 비밀번호 확인</label><input id="recovery-new-password-confirm" name="passwordConfirm" type="password" minlength="8" autocomplete="new-password" required /></div>
+      <button class="button button-primary button-full" type="submit">새 비밀번호 저장</button>
+      <p class="form-message" role="alert"></p>
+    `;
+    if (requestForm) requestForm.hidden = true;
+    container.appendChild(updateForm);
+    updateForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const password = String(updateForm.elements.password.value || "");
+      const passwordConfirm = String(updateForm.elements.passwordConfirm.value || "");
+      const status = updateForm.querySelector(".form-message");
+      if (password.length < 8) {
+        status.textContent = "새 비밀번호는 8자 이상 입력해 주세요.";
+        return;
+      }
+      if (password !== passwordConfirm) {
+        status.textContent = "새 비밀번호와 비밀번호 확인이 일치하지 않습니다.";
+        return;
+      }
+      const button = updateForm.querySelector('button[type="submit"]');
+      button.disabled = true;
+      try {
+        const { error } = await window.btlrSupabase.auth.updateUser({ password });
+        if (error) {
+          status.textContent = getFriendlyServiceError(error, "비밀번호를 변경하지 못했습니다.");
+          return;
+        }
+        status.textContent = "비밀번호를 변경했습니다. 새 비밀번호로 로그인해 주세요.";
+        status.classList.add("success");
+        await window.btlrSupabase.auth.signOut();
+        window.setTimeout(() => window.location.replace("login.html"), 900);
+      } catch (error) {
+        status.textContent = getFriendlyServiceError(error, "비밀번호를 변경하지 못했습니다.");
+      } finally {
+        button.disabled = false;
+      }
+    });
+  };
+
+  if (recoveryMode) showUpdateForm();
+  window.btlrSupabase?.auth.onAuthStateChange((event) => {
+    if (event === "PASSWORD_RECOVERY") showUpdateForm();
+  });
+}
+
 async function initAdminPage() {
   const user = getCurrentUser();
   const pageMessage = document.getElementById("admin-page-message");
@@ -2130,7 +2365,7 @@ async function initAdminPage() {
     window.location.href = `login.html?next=${encodeURIComponent("admin.html")}`;
     return;
   }
-  if (user.role !== "admin") {
+  if (!isAdminUser(user)) {
     if (pageMessage) pageMessage.textContent = "관리자만 접근할 수 있는 페이지입니다.";
     return;
   }
@@ -2139,7 +2374,6 @@ async function initAdminPage() {
   const adminSection = document.body.dataset.adminSection || "users";
   if (adminSection === "users") await renderAdminUsers();
   if (adminSection === "books") {
-    await seedDefaultBooksIfEmpty();
     await Promise.all([renderAdminBooks(), renderAdminBookRequests()]);
   }
   if (adminSection === "room-reservations") await renderAdminRoomReservations();
@@ -2176,18 +2410,76 @@ async function initAdminPage() {
   document.getElementById("book-import-submit")?.addEventListener("click", importSelectedBooks);
   document.getElementById("curated-book-import")?.addEventListener("click", importCuratedCategoryBooks);
   document.getElementById("repair-book-categories")?.addEventListener("click", repairExistingBookCategories);
+  document.getElementById("admin-user-filter")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    applyAdminUserFilters();
+  });
+  document.getElementById("admin-user-role-filter")?.addEventListener("change", applyAdminUserFilters);
+  document.getElementById("admin-user-sort")?.addEventListener("change", applyAdminUserFilters);
+  document.getElementById("admin-user-filter-reset")?.addEventListener("click", () => {
+    document.getElementById("admin-user-filter")?.reset();
+    applyAdminUserFilters();
+  });
+  const applyBookRequestFilters = () => {
+    adminBookRequestFilterState = {
+      query: String(document.getElementById("admin-book-request-query")?.value || "").trim(),
+      status: document.getElementById("admin-book-request-status")?.value || "all",
+      sort: document.getElementById("admin-book-request-sort")?.value || "newest",
+    };
+    adminBookRequestPage = 1;
+    renderAdminBookRequestPage();
+  };
+  document.getElementById("admin-book-request-filter")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    applyBookRequestFilters();
+  });
+  document.getElementById("admin-book-request-status")?.addEventListener("change", applyBookRequestFilters);
+  document.getElementById("admin-book-request-sort")?.addEventListener("change", applyBookRequestFilters);
+  document.getElementById("admin-book-request-filter-reset")?.addEventListener("click", () => {
+    document.getElementById("admin-book-request-filter")?.reset();
+    applyBookRequestFilters();
+  });
+  const applyRoomFilters = () => {
+    adminRoomFilterState = {
+      query: String(document.getElementById("admin-room-query")?.value || "").trim(),
+      date: document.getElementById("admin-room-date-filter")?.value || "",
+      sort: document.getElementById("admin-room-sort")?.value || "soonest",
+    };
+    adminRoomPage = 1;
+    renderAdminRoomReservationPage();
+  };
+  document.getElementById("admin-room-filter")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    applyRoomFilters();
+  });
+  document.getElementById("admin-room-date-filter")?.addEventListener("change", applyRoomFilters);
+  document.getElementById("admin-room-sort")?.addEventListener("change", applyRoomFilters);
+  document.getElementById("admin-room-filter-reset")?.addEventListener("click", () => {
+    document.getElementById("admin-room-filter")?.reset();
+    applyRoomFilters();
+  });
+  const applyInquiryFilters = () => {
+    adminInquiryFilterState = {
+      query: String(document.getElementById("admin-inquiry-query")?.value || "").trim(),
+      status: document.getElementById("admin-inquiry-status-filter")?.value || "all",
+      visibility: document.getElementById("admin-inquiry-visibility-filter")?.value || "all",
+    };
+    adminInquiryPage = 1;
+    renderAdminInquiryPage();
+  };
+  document.getElementById("admin-inquiry-filter")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    applyInquiryFilters();
+  });
+  document.getElementById("admin-inquiry-status-filter")?.addEventListener("change", applyInquiryFilters);
+  document.getElementById("admin-inquiry-visibility-filter")?.addEventListener("change", applyInquiryFilters);
+  document.getElementById("admin-inquiry-filter-reset")?.addEventListener("click", () => {
+    document.getElementById("admin-inquiry-filter")?.reset();
+    applyInquiryFilters();
+  });
+  document.addEventListener("click", handleManagedPagination);
   document.querySelectorAll("#admin-book-form, #admin-book-edit-form").forEach(bindBookFormEnhancements);
   if (adminSection === "books") await restoreAdminBookDraft();
-}
-
-async function seedDefaultBooksIfEmpty() {
-  if (!window.btlrSupabase) return;
-  const { count, error } = await window.btlrSupabase
-    .from("books")
-    .select("id", { count: "exact", head: true });
-  if (error || count !== 0) return;
-  await window.btlrSupabase.from("books").insert(mockBooks.map(serializeBookForDatabase));
-  await loadBooksFromSupabase();
 }
 
 async function renderAdminUsers() {
@@ -2201,36 +2493,74 @@ async function renderAdminUsers() {
     renderAdminPagination("users", 0);
     return;
   }
-  adminUsersCache = (data || []).filter(
-    (member) => String(member.email || "").trim().toLocaleLowerCase() !== PRIMARY_ADMIN_EMAIL,
-  );
+  adminUsersCache = data || [];
+  renderAdminUserPage();
+}
+
+function getFilteredAdminUsers() {
+  const query = adminUserFilterState.query.toLocaleLowerCase("ko-KR");
+  const users = adminUsersCache.filter((member) => {
+    const matchesQuery = !query || [member.login_id, member.name, member.email]
+      .some((value) => String(value || "").toLocaleLowerCase("ko-KR").includes(query));
+    const normalizedRole = member.is_primary_admin || member.role === "owner"
+      || String(member.email || "").toLocaleLowerCase() === PRIMARY_ADMIN_EMAIL
+      ? "owner"
+      : member.role;
+    return matchesQuery && (adminUserFilterState.role === "all" || normalizedRole === adminUserFilterState.role);
+  });
+  return users.sort((first, second) => {
+    if (adminUserFilterState.sort === "oldest") return new Date(first.created_at || 0) - new Date(second.created_at || 0);
+    if (adminUserFilterState.sort === "name") return String(first.name || "").localeCompare(String(second.name || ""), "ko");
+    if (adminUserFilterState.sort === "recent-login") return new Date(second.last_sign_in_at || 0) - new Date(first.last_sign_in_at || 0);
+    return new Date(second.created_at || 0) - new Date(first.created_at || 0);
+  });
+}
+
+function applyAdminUserFilters() {
+  adminUserFilterState = {
+    query: String(document.getElementById("admin-user-query")?.value || "").trim(),
+    role: document.getElementById("admin-user-role-filter")?.value || "all",
+    sort: document.getElementById("admin-user-sort")?.value || "newest",
+  };
+  adminUserPage = 1;
   renderAdminUserPage();
 }
 
 function renderAdminUserPage() {
   const target = document.getElementById("admin-user-list");
   if (!target) return;
-  if (!adminUsersCache.length) {
-    target.innerHTML = '<tr><td colspan="7">가입한 회원이 없습니다.</td></tr>';
+  const filteredMembers = getFilteredAdminUsers();
+  const summary = document.getElementById("admin-user-filter-summary");
+  if (summary) summary.textContent = `전체 ${adminUsersCache.length}명 중 ${filteredMembers.length}명`;
+  if (!filteredMembers.length) {
+    target.innerHTML = `<tr><td colspan="7">${adminUsersCache.length ? "검색 조건과 일치하는 회원이 없습니다." : "가입한 회원이 없습니다."}</td></tr>`;
     renderAdminPagination("users", 0);
     return;
   }
-  const totalPages = Math.ceil(adminUsersCache.length / ADMIN_PAGE_SIZE);
+  const totalPages = Math.ceil(filteredMembers.length / ADMIN_PAGE_SIZE);
   adminUserPage = Math.min(Math.max(adminUserPage, 1), totalPages);
   const startIndex = (adminUserPage - 1) * ADMIN_PAGE_SIZE;
-  const visibleMembers = adminUsersCache.slice(startIndex, startIndex + ADMIN_PAGE_SIZE);
-  target.innerHTML = visibleMembers.map((member) => `
+  const visibleMembers = filteredMembers.slice(startIndex, startIndex + ADMIN_PAGE_SIZE);
+  target.innerHTML = visibleMembers.map((member) => {
+    const isPrimaryAdmin = Boolean(member.is_primary_admin) || member.role === "owner"
+      || String(member.email || "").trim().toLocaleLowerCase() === PRIMARY_ADMIN_EMAIL;
+    return `
     <tr>
       <td>${escapeHTML(member.login_id || "-")}</td>
-      <td><input class="admin-name-input" type="text" value="${escapeHTML(member.name || "")}" maxlength="30" data-name-input="${member.user_id}" /></td>
+      <td><input class="admin-name-input" type="text" value="${escapeHTML(member.name || "")}" maxlength="30" data-name-input="${member.user_id}" ${isPrimaryAdmin ? "readonly" : ""} /></td>
       <td>${escapeHTML(member.email || "-")}</td>
-      <td><select data-role-select="${member.user_id}"><option value="member" ${member.role === "member" ? "selected" : ""}>회원</option><option value="admin" ${member.role === "admin" ? "selected" : ""}>부관리자</option></select></td>
+      <td>${isPrimaryAdmin
+        ? '<span class="admin-primary-role">주 관리자</span>'
+        : `<select data-role-select="${member.user_id}"><option value="member" ${member.role === "member" ? "selected" : ""}>회원</option><option value="admin" ${member.role === "admin" ? "selected" : ""}>부관리자</option></select>`}</td>
       <td>${formatDate(member.created_at)}</td>
       <td>${formatDate(member.last_sign_in_at)}</td>
-      <td><div class="admin-row-actions"><button class="table-action" type="button" data-admin-action="save-user" data-user-id="${member.user_id}">저장</button><button class="table-action danger" type="button" data-admin-action="delete-user" data-user-id="${member.user_id}" data-user-name="${escapeHTML(member.name || member.email || "회원")}">삭제</button></div></td>
+      <td><div class="admin-row-actions">${isPrimaryAdmin
+        ? '<span class="admin-primary-role">보호 계정</span>'
+        : `<button class="table-action" type="button" data-admin-action="save-user" data-user-id="${member.user_id}">저장</button><button class="table-action danger" type="button" data-admin-action="delete-user" data-user-id="${member.user_id}" data-user-name="${escapeHTML(member.name || member.email || "회원")}">삭제</button>`}</div></td>
     </tr>
-  `).join("");
-  renderAdminPagination("users", adminUsersCache.length);
+  `;
+  }).join("");
+  renderAdminPagination("users", filteredMembers.length);
 }
 
 function getAdminPaginationItems(currentPage, totalPages) {
@@ -2243,6 +2573,43 @@ function getAdminPaginationItems(currentPage, totalPages) {
     items.push(page);
   });
   return items;
+}
+
+function renderManagedPagination(targetId, type, currentPage, totalItems) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  const totalPages = Math.ceil(totalItems / ADMIN_PAGE_SIZE);
+  if (totalPages <= 1) {
+    target.hidden = true;
+    target.replaceChildren();
+    return;
+  }
+  target.hidden = false;
+  target.innerHTML = `
+    <button type="button" data-managed-page-type="${type}" data-managed-page="${currentPage - 1}" ${currentPage === 1 ? "disabled" : ""}>이전</button>
+    ${getAdminPaginationItems(currentPage, totalPages).map((item) => item === "ellipsis"
+      ? '<span class="admin-pagination-ellipsis" aria-hidden="true">…</span>'
+      : `<button type="button" data-managed-page-type="${type}" data-managed-page="${item}" class="${item === currentPage ? "active" : ""}" ${item === currentPage ? 'aria-current="page"' : ""}>${item}</button>`).join("")}
+    <button type="button" data-managed-page-type="${type}" data-managed-page="${currentPage + 1}" ${currentPage === totalPages ? "disabled" : ""}>다음</button>`;
+}
+
+function handleManagedPagination(event) {
+  const button = event.target.closest("[data-managed-page]");
+  if (!button || button.disabled) return;
+  const page = Math.max(Number(button.dataset.managedPage) || 1, 1);
+  if (button.dataset.managedPageType === "book-requests") {
+    adminBookRequestPage = page;
+    renderAdminBookRequestPage();
+  } else if (button.dataset.managedPageType === "rooms") {
+    adminRoomPage = page;
+    renderAdminRoomReservationPage();
+  } else if (button.dataset.managedPageType === "admin-inquiries") {
+    adminInquiryPage = page;
+    renderAdminInquiryPage();
+  } else if (button.dataset.managedPageType === "public-inquiries") {
+    publicInquiryPage = page;
+    renderPublicInquiryPages();
+  }
 }
 
 function renderAdminPagination(type, totalItems) {
@@ -2291,6 +2658,7 @@ async function handleAdminUserAction(event) {
   if (button.dataset.adminAction === "save-user") {
     const input = document.querySelector(`[data-name-input="${CSS.escape(userId)}"]`);
     const roleSelect = document.querySelector(`[data-role-select="${CSS.escape(userId)}"]`);
+    const currentMember = adminUsersCache.find((member) => String(member.user_id) === String(userId));
     const nextName = String(input?.value || "").trim().replace(/\s+/g, " ");
     if (!nextName) {
       showToast("이름을 입력해 주세요.");
@@ -2300,7 +2668,7 @@ async function handleAdminUserAction(event) {
     const { error } = await window.btlrSupabase.rpc("admin_update_user", {
       target_user_id: userId,
       next_name: nextName,
-      next_role: roleSelect?.value || "member",
+      next_role: roleSelect?.value || currentMember?.role || "member",
     });
     button.disabled = false;
     showToast(error ? error.message : "회원 정보를 저장했습니다.");
@@ -2395,9 +2763,19 @@ async function fetchExternalBooks(query, category, size, options = {}) {
   const response = await fetch(`/api/search-books?${params}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  const result = await response.json();
+  const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result.message || "도서 검색에 실패했습니다.");
-  return result;
+  const books = (Array.isArray(result.books) ? result.books : []).map((book) => {
+    const normalizedDescriptions = normalizeBookDescriptions(book);
+    return {
+      ...book,
+      category: String(book.category || category || "기타").trim() || "기타",
+      keywords: normalizeBookKeywords(book.keywords, book.category || category),
+      description: normalizedDescriptions.description,
+      shortDescription: normalizedDescriptions.shortDescription,
+    };
+  });
+  return { ...result, books };
 }
 
 function normalizeCuratedTitle(value) {
@@ -2520,9 +2898,9 @@ function setBookCategoryRepairMessage(message, success = false) {
 }
 
 function isBookDescriptionIncomplete(book) {
-  const description = String(book?.description || "").trim();
-  if (!description || /(?:\.{2,}|…+)\s*$/.test(description)) return true;
-  return !/[.!?。！？]["'”’」』)]?\s*$/.test(description);
+  if (book?.descriptionNeedsRepair === true) return true;
+  const description = String(book?.originalDescription ?? book?.description ?? "").trim();
+  return !description || /(?:\.{2,}|…+)\s*$/.test(description);
 }
 
 function isLikelyComicBook(book) {
@@ -2555,8 +2933,8 @@ async function requestBookRepairMetadata(book, accessToken) {
         author: book.author,
         publisher: book.publisher || "",
         publishedDate: book.publishedDate || "",
-        description: book.description || "",
-        shortDescription: book.shortDescription || "",
+        description: book.originalDescription ?? book.description ?? "",
+        shortDescription: book.originalShortDescription ?? book.shortDescription ?? "",
         category: isLikelyComicBook(book) && book.category !== "만화"
           ? ""
           : BOOK_CATEGORIES.includes(String(book.category || "").trim()) ? book.category : "",
@@ -2584,6 +2962,7 @@ async function repairExistingBookCategories() {
     !BOOK_CATEGORIES.includes(String(book.category || "").trim())
     || (book.category !== "만화" && isLikelyComicBook(book))
     || isBookDescriptionIncomplete(book)
+    || (book.originalKeywords || []).some((keyword) => String(keyword).trim().toLocaleLowerCase("ko-KR") === String(book.category || "").trim().toLocaleLowerCase("ko-KR"))
   ));
   if (!booksToRepair.length) {
     setBookCategoryRepairMessage("정리할 도서 정보가 없습니다.", true);
@@ -2613,19 +2992,49 @@ async function repairExistingBookCategories() {
       setBookCategoryRepairMessage(`'${book.title}'의 분류와 설명을 확인하고 있습니다.`);
 
       try {
+        const locallyNormalizedDescriptions = normalizeBookDescriptions({
+          ...book,
+          description: book.originalDescription ?? book.description,
+          shortDescription: book.originalShortDescription ?? book.shortDescription,
+        });
+        const needsAiCategory = !BOOK_CATEGORIES.includes(String(book.category || "").trim())
+          || (book.category !== "만화" && isLikelyComicBook(book));
+        const needsAiDescription = isBookDescriptionIncomplete(book)
+          && locallyNormalizedDescriptions.description === String(book.originalDescription ?? book.description ?? "").trim();
+        if (!needsAiCategory && !needsAiDescription) {
+          const { data, error } = await window.btlrSupabase
+            .from("books")
+            .update({
+              keywords: normalizeBookKeywords(book.originalKeywords || book.keywords, book.category),
+              description: locallyNormalizedDescriptions.description,
+              short_description: locallyNormalizedDescriptions.shortDescription,
+            })
+            .eq("id", book.id)
+            .select("id")
+            .maybeSingle();
+          if (error) throw new Error(error.message);
+          if (!data) throw new Error("도서 수정 권한이 없거나 해당 도서를 찾지 못했습니다.");
+          repairedCount += 1;
+          consecutiveFailures = 0;
+          continue;
+        }
+
         const metadata = await requestBookRepairMetadata(book, accessToken);
         if (!BOOK_CATEGORIES.includes(metadata.category)) throw new Error("올바른 카테고리를 받지 못했습니다.");
 
-        const keywords = Array.isArray(metadata.keywords)
-          ? [...new Set(metadata.keywords.map((keyword) => String(keyword).trim()).filter(Boolean))].slice(0, 6)
-          : [];
+        const normalizedDescriptions = normalizeBookDescriptions({
+          ...book,
+          description: metadata.description,
+          shortDescription: metadata.shortDescription,
+        });
+        const keywords = normalizeBookKeywords(metadata.keywords, metadata.category);
         const { data, error } = await window.btlrSupabase
           .from("books")
           .update({
             category: metadata.category,
             keywords,
-            description: String(metadata.description || "").trim(),
-            short_description: String(metadata.shortDescription || "").trim(),
+            description: normalizedDescriptions.description,
+            short_description: normalizedDescriptions.shortDescription,
           })
           .eq("id", book.id)
           .select("id")
@@ -2689,7 +3098,7 @@ async function searchBooksForImport(event) {
     renderBookImportResults(result.totalCount);
     setBookImportMessage(
       adminBookImportResults.length
-        ? `${adminBookImportResults.length}권을 불러왔습니다. 추가할 도서를 선택해 주세요.`
+        ? `${adminBookImportResults.length}권을 불러왔습니다. 추가할 도서를 선택해 주세요.${result.enrichmentStatus === "partial" || result.enrichmentStatus === "failed" ? " 일부 AI 보완 정보는 기본 도서 정보로 대신했습니다." : ""}`
         : "검색 결과가 없습니다. 다른 검색어를 입력해 주세요.",
       adminBookImportResults.length > 0,
     );
@@ -2835,16 +3244,46 @@ async function renderAdminBookRequests() {
 
   const { data, error } = await window.btlrSupabase.rpc("admin_list_book_requests");
   if (error) {
+    adminBookRequestsCache = [];
     target.innerHTML = `<p class="admin-empty">${escapeHTML(error.message)}</p>`;
+    renderManagedPagination("admin-book-request-pagination", "book-requests", 1, 0);
     return;
   }
+  adminBookRequestsCache = (data || []).map((request) => ({
+    ...request,
+    status: request.status || "pending",
+  }));
+  renderAdminBookRequestPage();
+}
 
-  if (!data?.length) {
-    target.innerHTML = '<div class="request-empty"><span>✓</span><strong>처리할 도서 요청이 없습니다.</strong></div>';
+function getFilteredAdminBookRequests() {
+  const query = adminBookRequestFilterState.query.toLocaleLowerCase("ko-KR");
+  return adminBookRequestsCache.filter((request) => {
+    const matchesQuery = !query || [request.title, request.requester_name, request.requester_login_id, request.requester_email]
+      .some((value) => String(value || "").toLocaleLowerCase("ko-KR").includes(query));
+    return matchesQuery && (adminBookRequestFilterState.status === "all" || request.status === adminBookRequestFilterState.status);
+  }).sort((first, second) => {
+    if (adminBookRequestFilterState.sort === "oldest") return new Date(first.requested_at || 0) - new Date(second.requested_at || 0);
+    if (adminBookRequestFilterState.sort === "title") return String(first.title || "").localeCompare(String(second.title || ""), "ko");
+    return new Date(second.requested_at || 0) - new Date(first.requested_at || 0);
+  });
+}
+
+function renderAdminBookRequestPage() {
+  const target = document.getElementById("admin-book-request-list");
+  if (!target) return;
+  const requests = getFilteredAdminBookRequests();
+  const summary = document.getElementById("admin-book-request-filter-summary");
+  if (summary) summary.textContent = `전체 ${adminBookRequestsCache.length}건 중 ${requests.length}건`;
+  if (!requests.length) {
+    target.innerHTML = `<div class="request-empty"><span>✓</span><strong>${adminBookRequestsCache.length ? "검색 조건과 일치하는 요청이 없습니다." : "처리할 도서 요청이 없습니다."}</strong></div>`;
+    renderManagedPagination("admin-book-request-pagination", "book-requests", 1, 0);
     return;
   }
-
-  target.innerHTML = data.map((request) => `
+  const totalPages = Math.ceil(requests.length / ADMIN_PAGE_SIZE);
+  adminBookRequestPage = Math.min(Math.max(adminBookRequestPage, 1), totalPages);
+  const visibleRequests = requests.slice((adminBookRequestPage - 1) * ADMIN_PAGE_SIZE, adminBookRequestPage * ADMIN_PAGE_SIZE);
+  target.innerHTML = visibleRequests.map((request) => `
     <article class="admin-request-card">
       <div class="admin-request-cover">
         ${request.thumbnail
@@ -2852,17 +3291,17 @@ async function renderAdminBookRequests() {
           : '<span class="cover-fallback" aria-hidden="true">B</span>'}
       </div>
       <div class="admin-request-copy">
-        <span class="request-status status-pending">승인 대기</span>
+        <span class="request-status status-${escapeHTML(request.status || "pending")}">${({ pending: "승인 대기", approved: "추가 완료", rejected: "요청 거절", cancelled: "요청 취소" })[request.status] || "승인 대기"}</span>
         <h4>${escapeHTML(request.title)}</h4>
         <p>${escapeHTML(request.author)}${request.publisher ? ` · ${escapeHTML(request.publisher)}` : ""}</p>
         <small>${escapeHTML(request.category || "기타")} · 요청자 ${escapeHTML(request.requester_name || request.requester_login_id || request.requester_email || "회원")} · ${formatDate(request.requested_at)}</small>
       </div>
       <div class="admin-row-actions">
-        <button class="table-action" type="button" data-book-request-action="approve" data-request-id="${request.request_id}">추가 승인</button>
-        <button class="table-action danger" type="button" data-book-request-action="reject" data-request-id="${request.request_id}" data-request-title="${escapeHTML(request.title)}">거절</button>
+        ${request.status && request.status !== "pending" ? "" : `<button class="table-action" type="button" data-book-request-action="approve" data-request-id="${request.request_id}">추가 승인</button><button class="table-action danger" type="button" data-book-request-action="reject" data-request-id="${request.request_id}" data-request-title="${escapeHTML(request.title)}">거절</button>`}
       </div>
     </article>
   `).join("");
+  renderManagedPagination("admin-book-request-pagination", "book-requests", adminBookRequestPage, requests.length);
 }
 
 async function handleAdminBookRequestAction(event) {
@@ -2976,6 +3415,16 @@ function resetAdminBookFilter() {
 function renderAdminBookPage() {
   const target = document.getElementById("admin-book-list");
   if (!target) return;
+  if (booksLoadState === "loading") {
+    target.innerHTML = '<p class="admin-empty">도서 목록을 불러오는 중...</p>';
+    return;
+  }
+  if (booksLoadState === "error") {
+    target.innerHTML = `<div class="admin-empty"><p>${escapeHTML(booksLoadError || "도서 목록을 불러오지 못했습니다.")}</p><button class="table-action" type="button" data-retry-admin-books>다시 시도</button></div>`;
+    renderAdminPagination("books", 0);
+    updateAdminBookBulkToolbar([]);
+    return;
+  }
   const allBooks = getBooks();
   const books = getFilteredAdminBooks();
   const existingIds = new Set(allBooks.map((book) => book.id));
@@ -3067,7 +3516,7 @@ function clearAdminBookSelection() {
 async function deleteSelectedAdminBooks() {
   const ids = [...adminSelectedBookIds];
   if (!ids.length || !window.btlrSupabase) return;
-  if (!window.confirm(`선택한 도서 ${ids.length}권을 삭제할까요? 삭제한 도서는 복구할 수 없습니다.`)) return;
+  if (!window.confirm(`선택한 도서 ${ids.length}권을 도서 목록에서 삭제할까요? 대출 이력은 보존됩니다.`)) return;
 
   const button = document.getElementById("admin-book-delete-selected");
   const originalText = button?.textContent || "선택 도서 삭제";
@@ -3078,17 +3527,16 @@ async function deleteSelectedAdminBooks() {
 
   try {
     for (let index = 0; index < ids.length; index += 50) {
-      const { error } = await window.btlrSupabase
-        .from("books")
-        .delete()
-        .in("id", ids.slice(index, index + 50));
+      const { error } = await window.btlrSupabase.rpc("admin_archive_books", {
+        target_book_ids: ids.slice(index, index + 50),
+      });
       if (error) throw error;
     }
     adminSelectedBookIds.clear();
     showToast(`${ids.length}권을 삭제했습니다.`);
     await renderAdminBooks();
   } catch (error) {
-    showToast(error?.message || "선택한 도서를 삭제하지 못했습니다.");
+    showToast(getFriendlyServiceError(error, "선택한 도서를 삭제하지 못했습니다."));
   } finally {
     if (button) button.textContent = originalText;
     updateAdminBookBulkToolbar();
@@ -3318,17 +3766,24 @@ async function fillBookMetadataWithAI(form) {
         shortDescription: String(values.shortDescription || "").trim(),
       }),
     });
-    const result = await response.json();
+    const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.message || "AI 자동 입력에 실패했습니다.");
+
+    const normalizedDescriptions = normalizeBookDescriptions({
+      title,
+      author: result.author || author,
+      description: result.description,
+      shortDescription: result.shortDescription,
+    });
 
     const fieldMap = {
       author: result.author,
       publisher: result.publisher,
       publishedDate: result.publishedDate,
       category: result.category,
-      keywords: Array.isArray(result.keywords) ? result.keywords.join(", ") : result.keywords,
-      shortDescription: result.shortDescription,
-      description: result.description,
+      keywords: normalizeBookKeywords(result.keywords, result.category).join(", "),
+      shortDescription: normalizedDescriptions.shortDescription,
+      description: normalizedDescriptions.description,
     };
     const shouldRepairClassification = !BOOK_CATEGORIES.includes(String(form.elements.category?.value || "").trim());
     const shouldRepairDescription = isBookDescriptionIncomplete({ description: form.elements.description?.value });
@@ -3347,7 +3802,7 @@ async function fillBookMetadataWithAI(form) {
 
 async function uploadBookCover(form, bookId) {
   const file = form.elements.coverFile?.files?.[0];
-  if (!file) return { url: String(form.elements.thumbnail.value || "") };
+  if (!file) return { url: String(form.elements.thumbnail.value || ""), path: "" };
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
   if (!allowedTypes.includes(file.type)) {
     return { error: "표지 이미지는 JPG, JPEG, PNG, WEBP 파일만 사용할 수 있습니다." };
@@ -3364,7 +3819,26 @@ async function uploadBookCover(form, bookId) {
     .upload(filePath, file, { contentType: file.type, upsert: false });
   if (error) return { error: error.message };
   const { data } = window.btlrSupabase.storage.from("book-covers").getPublicUrl(filePath);
-  return { url: data.publicUrl };
+  return { url: data.publicUrl, path: filePath };
+}
+
+function getBookCoverStoragePath(publicUrl) {
+  const marker = "/storage/v1/object/public/book-covers/";
+  const value = String(publicUrl || "");
+  const markerIndex = value.indexOf(marker);
+  if (markerIndex < 0) return "";
+  try {
+    return decodeURIComponent(value.slice(markerIndex + marker.length));
+  } catch {
+    return value.slice(markerIndex + marker.length);
+  }
+}
+
+async function removeBookCoverStorageFiles(paths) {
+  const uniquePaths = [...new Set((paths || []).filter(Boolean))];
+  if (!uniquePaths.length || !window.btlrSupabase) return;
+  const { error } = await window.btlrSupabase.storage.from("book-covers").remove(uniquePaths);
+  if (error) console.warn("사용하지 않는 표지 이미지를 정리하지 못했습니다.", error);
 }
 
 function openAdminBookDialog(book) {
@@ -3400,6 +3874,7 @@ function saveEditedAdminBook(event) {
 async function saveAdminBook(form, isEdit) {
   const submitButton = form.querySelector('button[type="submit"]');
   const originalButtonText = submitButton?.textContent || "저장";
+  let uploadedCoverPath = "";
 
   // 빠른 연속 클릭이나 중복 이벤트로 같은 저장 요청이 두 번 실행되는 것을 막습니다.
   if (form.dataset.saving === "true") return;
@@ -3422,11 +3897,13 @@ async function saveAdminBook(form, isEdit) {
       throw new Error("전체 수량은 1 이상의 정수로 입력해 주세요.");
     }
 
-    // 새 도서만 빈 정보를 AI로 채웁니다. 기존 도서 수정은 AI 상태와 관계없이 저장합니다.
+    // AI 보완은 편의 기능입니다. 실패해도 완결된 기본 설명으로 저장할 수 있습니다.
     if (!isEdit && needsBookMetadata(form)) {
       showBookFormMessage(form, "AI가 빈 도서 정보를 작성하고 있습니다...");
       const aiResult = await fillBookMetadataWithAI(form);
-      if (!aiResult.success) throw new Error(aiResult.message);
+      if (!aiResult.success) {
+        showBookFormMessage(form, `${aiResult.message} 기본 정보로 계속 저장합니다.`);
+      }
       saveAdminBookDraft(form);
       values = Object.fromEntries(new FormData(form).entries());
     }
@@ -3439,7 +3916,9 @@ async function saveAdminBook(form, isEdit) {
 
     const coverResult = await uploadBookCover(form, generatedId);
     if (coverResult.error) throw new Error(coverResult.error);
+    uploadedCoverPath = coverResult.path || "";
 
+    const previousBook = isEdit ? getBookById(originalId) : null;
     const book = {
       id: generatedId,
       title: String(values.title || "").trim(),
@@ -3447,7 +3926,7 @@ async function saveAdminBook(form, isEdit) {
       publisher: String(values.publisher || "").trim(),
       publishedDate: values.publishedDate || null,
       category: String(values.category || "기타").trim(),
-      keywords: String(values.keywords || "").split(",").map((item) => item.trim()).filter(Boolean),
+      keywords: normalizeBookKeywords(values.keywords, values.category),
       description: String(values.description || "").trim(),
       shortDescription: String(values.shortDescription || "").trim(),
       thumbnail: coverResult.url,
@@ -3483,8 +3962,13 @@ async function saveAdminBook(form, isEdit) {
     showToast(successMessage);
     if (isEdit) closeAdminBookDialog();
     else resetAdminBookForm();
+    const previousCoverPath = getBookCoverStoragePath(previousBook?.thumbnail);
+    if (isEdit && coverResult.path && previousCoverPath && previousCoverPath !== coverResult.path) {
+      await removeBookCoverStorageFiles([previousCoverPath]);
+    }
     await renderAdminBooks();
   } catch (error) {
+    if (uploadedCoverPath) await removeBookCoverStorageFiles([uploadedCoverPath]);
     const message = error?.details
       ? `${error.message} (${error.details})`
       : (error?.message || "도서 정보를 저장하지 못했습니다.");
@@ -3499,6 +3983,10 @@ async function saveAdminBook(form, isEdit) {
 }
 
 async function handleAdminBookAction(event) {
+  if (event.target.closest("[data-retry-admin-books]")) {
+    await renderAdminBooks();
+    return;
+  }
   const button = event.target.closest("[data-admin-book-action]");
   if (!button) return;
   const book = getBookById(button.dataset.bookId);
@@ -3508,8 +3996,8 @@ async function handleAdminBookAction(event) {
     return;
   }
   if (!window.confirm(`'${book.title}' 도서를 삭제할까요?`)) return;
-  const { error } = await window.btlrSupabase.from("books").delete().eq("id", book.id);
-  showToast(error ? error.message : "도서를 삭제했습니다.");
+  const { error } = await window.btlrSupabase.rpc("admin_archive_book", { target_book_id: book.id });
+  showToast(error ? getFriendlyServiceError(error, "도서를 삭제하지 못했습니다.") : "도서를 삭제했습니다.");
   if (!error) {
     booksCache = booksCache.filter((item) => item.id !== book.id);
     await renderAdminBooks();
@@ -3531,6 +4019,7 @@ function groupReadingRoomReservations(rows) {
         userId: row.user_id,
         userName: row.user_name || "",
         userEmail: row.user_email || "",
+        userLoginId: row.user_login_id || row.login_id || "",
         reservationDate: row.reservation_date,
         startTime: formatRoomTime(row.start_time),
         endTime: formatRoomTime(row.end_time),
@@ -3585,7 +4074,7 @@ async function loadMyPageRoomReservations() {
     target.innerHTML = `<div class="request-empty compact"><strong>예약 현황을 불러오지 못했습니다.</strong><p>${escapeHTML(error.message)}</p></div>`;
     return;
   }
-  const reservations = groupReadingRoomReservations(data);
+  const reservations = groupReadingRoomReservations((data || []).filter((reservation) => isReadingRoomReservationUpcoming(reservation)));
   setText("reading-room-count", reservations.length);
   if (!reservations.length) {
     target.innerHTML = '<div class="request-empty compact"><span>⌑</span><strong>예정된 열람실 예약이 없습니다.</strong><p>열람실 배치도에서 원하는 시간과 좌석을 선택해 보세요.</p><a class="button button-primary" href="reading-room.html">열람실 예약하기</a></div>';
@@ -3614,15 +4103,45 @@ async function renderAdminRoomReservations() {
   target.innerHTML = '<p class="request-loading">열람실 예약을 불러오는 중...</p>';
   const { data, error } = await window.btlrSupabase.rpc("admin_list_reading_room_reservations");
   if (error) {
+    adminRoomReservationsCache = [];
     target.innerHTML = `<div class="request-empty compact"><strong>예약 목록을 불러오지 못했습니다.</strong><p>${escapeHTML(error.message)}</p></div>`;
+    renderManagedPagination("admin-room-pagination", "rooms", 1, 0);
     return;
   }
-  const reservations = groupReadingRoomReservations(data);
+  adminRoomReservationsCache = groupReadingRoomReservations((data || []).filter((reservation) => isReadingRoomReservationUpcoming(reservation)));
+  renderAdminRoomReservationPage();
+}
+
+function getFilteredAdminRoomReservations() {
+  const query = adminRoomFilterState.query.toLocaleLowerCase("ko-KR");
+  return adminRoomReservationsCache.filter((reservation) => {
+    const matchesQuery = !query || [reservation.userName, reservation.userEmail, reservation.userLoginId]
+      .some((value) => String(value || "").toLocaleLowerCase("ko-KR").includes(query));
+    return matchesQuery && (!adminRoomFilterState.date || reservation.reservationDate === adminRoomFilterState.date);
+  }).sort((first, second) => {
+    if (adminRoomFilterState.sort === "name") return String(first.userName || "").localeCompare(String(second.userName || ""), "ko");
+    const firstTime = getReadingRoomDateTime(first.reservationDate, first.startTime)?.getTime() || 0;
+    const secondTime = getReadingRoomDateTime(second.reservationDate, second.startTime)?.getTime() || 0;
+    return adminRoomFilterState.sort === "latest" ? secondTime - firstTime : firstTime - secondTime;
+  });
+}
+
+function renderAdminRoomReservationPage() {
+  const target = document.getElementById("admin-room-reservation-list");
+  if (!target) return;
+  const reservations = getFilteredAdminRoomReservations();
+  const summary = document.getElementById("admin-room-filter-summary");
+  if (summary) summary.textContent = `예정 예약 ${adminRoomReservationsCache.length}건 중 ${reservations.length}건`;
   if (!reservations.length) {
-    target.innerHTML = '<div class="request-empty compact"><span>✓</span><strong>예정된 열람실 예약이 없습니다.</strong><p>새 예약이 등록되면 이곳에 표시됩니다.</p></div>';
+    target.innerHTML = `<div class="request-empty compact"><span>✓</span><strong>${adminRoomReservationsCache.length ? "검색 조건과 일치하는 예약이 없습니다." : "예정된 열람실 예약이 없습니다."}</strong><p>새 예약이 등록되면 이곳에 표시됩니다.</p></div>`;
+    renderManagedPagination("admin-room-pagination", "rooms", 1, 0);
     return;
   }
-  target.innerHTML = reservations.map((reservation) => createRoomReservationCard(reservation, { admin: true })).join("");
+  const totalPages = Math.ceil(reservations.length / ADMIN_PAGE_SIZE);
+  adminRoomPage = Math.min(Math.max(adminRoomPage, 1), totalPages);
+  const visibleReservations = reservations.slice((adminRoomPage - 1) * ADMIN_PAGE_SIZE, adminRoomPage * ADMIN_PAGE_SIZE);
+  target.innerHTML = visibleReservations.map((reservation) => createRoomReservationCard(reservation, { admin: true })).join("");
+  renderManagedPagination("admin-room-pagination", "rooms", adminRoomPage, reservations.length);
 }
 
 async function handleAdminRoomReservationAction(event) {
@@ -3652,7 +4171,7 @@ async function initReadingRoomPage() {
 
   const content = document.getElementById("reading-room-content");
   if (!content) return;
-  if (user.role === "admin") {
+  if (isAdminUser(user)) {
     content.innerHTML = `
       <div class="request-empty reading-room-gate">
         <span>!</span>
@@ -3885,7 +4404,7 @@ async function initReadingRoomPage() {
 
     reservationStateError = "";
     const groupedReservations = new Map();
-    (data || []).forEach((reservation) => {
+    (data || []).filter((reservation) => isReadingRoomReservationUpcoming(reservation)).forEach((reservation) => {
       const groupId = reservation.reservation_group_id || reservation.id;
       if (!groupedReservations.has(groupId)) {
         groupedReservations.set(groupId, {
@@ -4042,7 +4561,7 @@ function createInquiryImagesMarkup(inquiry) {
   if (!imageUrls.length) return "";
   return `<div class="inquiry-image-gallery">${imageUrls.map((url, index) => `
     <button class="inquiry-image-button" type="button" data-inquiry-image="${escapeHTML(url)}" aria-label="문의 첨부 사진 ${index + 1} 크게 보기">
-      <img src="${escapeHTML(url)}" alt="문의 첨부 사진 ${index + 1}" loading="lazy" />
+      <img src="${escapeHTML(url)}" alt="문의 첨부 사진 ${index + 1}" loading="lazy" decoding="async" />
     </button>
   `).join("")}</div>`;
 }
@@ -4118,9 +4637,24 @@ async function loadInquiryBoard() {
     pendingPanel.hidden = myPendingInquiries.length === 0;
     pendingTarget.innerHTML = myPendingInquiries.map(createPublicInquiryCard).join("");
   }
-  target.innerHTML = answeredInquiries.length
-    ? answeredInquiries.map(createPublicInquiryCard).join("")
-    : '<div class="request-empty"><span>✉</span><strong>아직 공개된 문의 답변이 없습니다.</strong><p>관리자 답변이 등록된 문의만 이 게시판에 표시됩니다.</p></div>';
+  publicInquiryPage = Math.min(publicInquiryPage, Math.max(Math.ceil(answeredInquiries.length / ADMIN_PAGE_SIZE), 1));
+  renderPublicInquiryPages();
+}
+
+function renderPublicInquiryPages() {
+  const target = document.getElementById("inquiry-list");
+  if (!target) return;
+  const answeredInquiries = inquiriesCache.filter((inquiry) => inquiry.is_answered);
+  if (!answeredInquiries.length) {
+    target.innerHTML = '<div class="request-empty"><span>✉</span><strong>아직 공개된 문의 답변이 없습니다.</strong><p>관리자 답변이 등록된 문의만 이 게시판에 표시됩니다.</p></div>';
+    renderManagedPagination("inquiry-pagination", "public-inquiries", 1, 0);
+    return;
+  }
+  const totalPages = Math.ceil(answeredInquiries.length / ADMIN_PAGE_SIZE);
+  publicInquiryPage = Math.min(Math.max(publicInquiryPage, 1), totalPages);
+  const visible = answeredInquiries.slice((publicInquiryPage - 1) * ADMIN_PAGE_SIZE, publicInquiryPage * ADMIN_PAGE_SIZE);
+  target.innerHTML = visible.map(createPublicInquiryCard).join("");
+  renderManagedPagination("inquiry-pagination", "public-inquiries", publicInquiryPage, answeredInquiries.length);
 }
 
 function openInquiryEditDialog(inquiryId) {
@@ -4132,6 +4666,30 @@ function openInquiryEditDialog(inquiryId) {
   form.elements.title.value = inquiry.title || "";
   form.elements.content.value = inquiry.content || "";
   form.elements.isSecret.checked = Boolean(inquiry.is_secret);
+  form.dataset.originalImagePaths = JSON.stringify(inquiry.imagePaths || []);
+  let attachmentEditor = form.querySelector("[data-inquiry-edit-attachments]");
+  if (!attachmentEditor) {
+    attachmentEditor = document.createElement("section");
+    attachmentEditor.dataset.inquiryEditAttachments = "true";
+    attachmentEditor.className = "inquiry-edit-attachments";
+    const note = form.querySelector(".inquiry-edit-note");
+    note?.replaceWith(attachmentEditor);
+  }
+  const signedUrls = Array.isArray(inquiry.signedImageUrls) ? inquiry.signedImageUrls : [];
+  attachmentEditor.innerHTML = `
+    <div><strong>첨부 사진</strong><small>유지할 사진은 그대로 두고, 삭제할 사진만 선택하세요. 전체 최대 10장입니다.</small></div>
+    <div class="inquiry-image-preview inquiry-edit-existing-images">
+      ${(inquiry.imagePaths || []).length
+        ? inquiry.imagePaths.map((path, index) => `
+          <label class="inquiry-edit-image-item">
+            ${signedUrls[index] ? `<img src="${escapeHTML(signedUrls[index])}" alt="기존 첨부 사진 ${index + 1}" loading="lazy" decoding="async" />` : `<span>사진 ${index + 1}</span>`}
+            <input type="checkbox" value="${escapeHTML(path)}" data-remove-inquiry-image />
+            <span>이 사진 삭제</span>
+          </label>`).join("")
+        : "<span>기존 첨부 사진이 없습니다.</span>"}
+    </div>
+    <label>새 사진 추가 <small>JPG, PNG, WEBP · 장당 5MB 이하</small><input type="file" name="newImages" accept="image/jpeg,image/png,image/webp" multiple /></label>
+  `;
   document.getElementById("inquiry-edit-character-count").textContent = String(form.elements.content.value.length);
   document.getElementById("inquiry-edit-message").textContent = "";
   dialog.showModal();
@@ -4153,18 +4711,45 @@ async function submitInquiryEdit(event) {
   form.dataset.submitting = "true";
   submitButton.disabled = true;
   submitButton.textContent = "저장 중...";
-  const { error } = await window.btlrSupabase.rpc("update_my_inquiry", {
+  const originalImagePaths = JSON.parse(form.dataset.originalImagePaths || "[]");
+  const pathsToRemove = new Set([...form.querySelectorAll("[data-remove-inquiry-image]:checked")].map((input) => input.value));
+  const retainedPaths = originalImagePaths.filter((path) => !pathsToRemove.has(path));
+  const newFiles = form.elements.newImages?.files || [];
+  if (retainedPaths.length + newFiles.length > 10) {
+    message.textContent = "문의 사진은 기존 사진과 새 사진을 합쳐 최대 10장까지 첨부할 수 있습니다.";
+    delete form.dataset.submitting;
+    submitButton.disabled = false;
+    submitButton.textContent = "저장";
+    return;
+  }
+
+  const uploadResult = await uploadInquiryImages(newFiles, getCurrentUser()?.id);
+  if (uploadResult.error) {
+    if (uploadResult.paths.length) await window.btlrSupabase.storage.from("inquiry-images").remove(uploadResult.paths);
+    message.textContent = getFriendlyServiceError(uploadResult.error, "새 문의 사진을 업로드하지 못했습니다.");
+    delete form.dataset.submitting;
+    submitButton.disabled = false;
+    submitButton.textContent = "저장";
+    return;
+  }
+  const nextImagePaths = [...retainedPaths, ...uploadResult.paths];
+  const { data: removedPaths, error } = await window.btlrSupabase.rpc("update_my_inquiry", {
     target_inquiry_id: form.dataset.inquiryId,
     next_title: title,
     next_content: content,
     next_is_secret: Boolean(form.elements.isSecret.checked),
+    next_image_paths: nextImagePaths,
   });
   delete form.dataset.submitting;
   submitButton.disabled = false;
   submitButton.textContent = "저장";
   if (error) {
-    message.textContent = error.message;
+    if (uploadResult.paths.length) await window.btlrSupabase.storage.from("inquiry-images").remove(uploadResult.paths);
+    message.textContent = getFriendlyServiceError(error, "문의를 수정하지 못했습니다.");
     return;
+  }
+  if (Array.isArray(removedPaths) && removedPaths.length) {
+    await window.btlrSupabase.storage.from("inquiry-images").remove(removedPaths.filter(Boolean));
   }
   document.getElementById("inquiry-edit-dialog")?.close();
   showToast("문의를 수정했습니다.");
@@ -4303,7 +4888,7 @@ function initInquiryPage() {
   const form = document.getElementById("inquiry-form");
   if (!user && compose) {
     compose.innerHTML = '<div class="inquiry-section-heading"><p class="eyebrow">NEW INQUIRY</p><h2>문의 작성</h2></div><div class="request-empty compact"><span>✉</span><strong>로그인 후 문의를 작성할 수 있습니다.</strong><p>문의 게시판은 로그인하지 않아도 확인할 수 있습니다.</p><a class="button button-primary" href="login.html?next=inquiry.html">로그인하고 문의하기</a></div>';
-  } else if (user?.role === "admin" && compose) {
+  } else if (isAdminUser(user) && compose) {
     compose.innerHTML = '<div class="inquiry-section-heading"><p class="eyebrow">ADMIN</p><h2>문의 답변 관리</h2></div><div class="request-empty compact"><span>✉</span><strong>관리자 문의 관리에서 답변할 수 있습니다.</strong><p>공개 게시판에서는 등록된 답변 결과를 확인합니다.</p><a class="button button-primary" href="admin-inquiries.html">문의 관리로 이동</a></div>';
   } else if (form) {
     form.addEventListener("submit", submitInquiry);
@@ -4328,6 +4913,7 @@ function initInquiryPage() {
     });
   }
   document.getElementById("refresh-inquiries")?.addEventListener("click", loadInquiryBoard);
+  document.getElementById("inquiry-pagination")?.addEventListener("click", handleManagedPagination);
   const editDialog = document.getElementById("inquiry-edit-dialog");
   const editForm = document.getElementById("inquiry-edit-form");
   editForm?.addEventListener("submit", submitInquiryEdit);
@@ -4376,15 +4962,43 @@ async function renderAdminInquiries() {
   target.innerHTML = '<p class="request-loading">문의 목록을 불러오는 중...</p>';
   const { data, error } = await window.btlrSupabase.rpc("list_inquiries");
   if (error) {
+    adminInquiriesCache = [];
     target.innerHTML = `<div class="request-empty compact"><strong>문의 목록을 불러오지 못했습니다.</strong><p>${escapeHTML(error.message)}</p></div>`;
+    renderManagedPagination("admin-inquiry-pagination", "admin-inquiries", 1, 0);
     return;
   }
-  const inquiries = await attachInquiryImageUrls(data || []);
+  adminInquiriesCache = await attachInquiryImageUrls(data || []);
+  renderAdminInquiryPage();
+}
+
+function getFilteredAdminInquiries() {
+  const query = adminInquiryFilterState.query.toLocaleLowerCase("ko-KR");
+  return adminInquiriesCache.filter((inquiry) => {
+    const matchesQuery = !query || [inquiry.title, inquiry.author_name, inquiry.author_email]
+      .some((value) => String(value || "").toLocaleLowerCase("ko-KR").includes(query));
+    const matchesStatus = adminInquiryFilterState.status === "all"
+      || (adminInquiryFilterState.status === "answered" ? inquiry.is_answered : !inquiry.is_answered);
+    const matchesVisibility = adminInquiryFilterState.visibility === "all"
+      || (adminInquiryFilterState.visibility === "secret" ? inquiry.is_secret : !inquiry.is_secret);
+    return matchesQuery && matchesStatus && matchesVisibility;
+  });
+}
+
+function renderAdminInquiryPage() {
+  const target = document.getElementById("admin-inquiry-list");
+  if (!target) return;
+  const inquiries = getFilteredAdminInquiries();
+  const summary = document.getElementById("admin-inquiry-filter-summary");
+  if (summary) summary.textContent = `전체 ${adminInquiriesCache.length}건 중 ${inquiries.length}건`;
   if (!inquiries.length) {
-    target.innerHTML = '<div class="request-empty compact"><span>✓</span><strong>등록된 문의가 없습니다.</strong><p>새 문의가 등록되면 이곳에 표시됩니다.</p></div>';
+    target.innerHTML = `<div class="request-empty compact"><span>✓</span><strong>${adminInquiriesCache.length ? "검색 조건과 일치하는 문의가 없습니다." : "등록된 문의가 없습니다."}</strong><p>새 문의가 등록되면 이곳에 표시됩니다.</p></div>`;
+    renderManagedPagination("admin-inquiry-pagination", "admin-inquiries", 1, 0);
     return;
   }
-  target.innerHTML = inquiries.map((inquiry) => `
+  const totalPages = Math.ceil(inquiries.length / ADMIN_PAGE_SIZE);
+  adminInquiryPage = Math.min(Math.max(adminInquiryPage, 1), totalPages);
+  const visibleInquiries = inquiries.slice((adminInquiryPage - 1) * ADMIN_PAGE_SIZE, adminInquiryPage * ADMIN_PAGE_SIZE);
+  target.innerHTML = visibleInquiries.map((inquiry) => `
     <article class="admin-inquiry-card">
       <header><div><span class="inquiry-status ${inquiry.is_answered ? "is-answered" : ""}">${inquiry.is_answered ? "답변 완료" : "답변 대기"}</span><h3>${escapeHTML(inquiry.title || "제목 없음")}</h3></div><div class="admin-inquiry-header-actions">${inquiry.is_secret ? '<span class="admin-secret-badge">비밀글</span>' : '<span class="admin-public-badge">공개글</span>'}<button class="button button-danger" type="button" data-admin-delete-inquiry="${escapeHTML(inquiry.id)}">문의 삭제</button></div></header>
       <div class="inquiry-meta"><span>${escapeHTML(inquiry.author_name || "회원")} · ${escapeHTML(inquiry.author_email || "-")}</span><time>${formatDate(inquiry.created_at)}</time></div>
@@ -4397,6 +5011,7 @@ async function renderAdminInquiries() {
       </form>
     </article>
   `).join("");
+  renderManagedPagination("admin-inquiry-pagination", "admin-inquiries", adminInquiryPage, inquiries.length);
 }
 
 async function handleAdminInquiryImageAction(event) {
@@ -4453,7 +5068,7 @@ async function initBookRequestPage() {
   if (!user) return;
 
   const searchPanel = document.querySelector(".request-search-panel");
-  if (user.role === "admin") {
+  if (isAdminUser(user)) {
     if (searchPanel) {
       searchPanel.innerHTML = `
         <div class="request-empty">
@@ -4680,12 +5295,12 @@ function initMyPage() {
       <div class="welcome-copy">
         <p>MY READING DASHBOARD</p>
         <h1><em>${escapeHTML(user.name)}</em>님의<br />오늘의 서재</h1>
-        <span>읽고 싶은 책과 이용 중인 도서를 한곳에서 관리하세요.</span>
+        <span>읽고 싶은 책과 이용 중인 도서를 한 곳에서 관리하세요.</span>
       </div>
       <div class="user-card">
         <div class="user-avatar">${escapeHTML(user.name.slice(0, 1).toUpperCase())}</div>
         <div><strong>${escapeHTML(user.name)}</strong><span>${escapeHTML(user.email)}</span></div>
-        <small>가입일 ${formatDate(user.createdAt || new Date())} · ${user.role === "admin" ? String(user.email).toLocaleLowerCase() === PRIMARY_ADMIN_EMAIL ? "최고 관리자" : "부관리자" : "도서관 회원"}</small>
+        <small>가입일 ${formatDate(user.createdAt || new Date())} · ${isAdminUser(user) ? String(user.email).toLocaleLowerCase() === PRIMARY_ADMIN_EMAIL || user.role === "owner" ? "최고 관리자" : "부관리자" : "도서관 회원"}</small>
       </div>
     `;
   }
@@ -4723,7 +5338,7 @@ function initMyPage() {
     "loan-list",
     loans,
     "loan",
-    "현재 대여한 도서가 없어요",
+    "현재 대출한 도서가 없어요",
     "대출 가능한 책을 찾아 나만의 독서 여정을 시작해 보세요.",
   );
   renderMyList(

@@ -7,12 +7,31 @@
     <title>문의 관리 | BOOK TO LEARN &amp; RUN</title>
     <link rel="icon" href="image/logo.png" type="image/png" />
     <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script><script src="config.js" defer></script><script src="supabase-client.js" defer></script><script src="app.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0" defer></script><script src="config.js" defer></script><script src="supabase-client.js" defer></script><script src="app.js" defer></script>
   </head>
   <body data-page="admin" data-admin-section="inquiries">
     <a class="skip-link" href="#main-content">본문 바로가기</a>
     <header class="site-header"><div class="header-inner"><a class="brand" href="index.html" aria-label="BOOK TO LEARN &amp; RUN 홈"><span class="brand-mark" aria-hidden="true"><span></span></span><span class="brand-copy"><strong>BOOK TO LEARN &amp; RUN</strong><small>PUBLIC LIBRARY SERVICE</small></span></a><form class="header-search" role="search"><label class="sr-only" for="header-search-admin-inquiries">도서 검색</label><input id="header-search-admin-inquiries" name="q" type="search" placeholder="책 제목, 저자, 키워드 검색" /><button type="submit" aria-label="검색"><span aria-hidden="true">⌕</span><span class="search-text">검색</span></button></form><div class="auth-area" data-auth-area></div></div><nav class="main-nav" aria-label="주요 메뉴"><div class="nav-inner"><a href="index.html">홈</a><a href="search.html">도서검색</a><a href="mypage.html">마이페이지</a></div></nav></header>
-    <main id="main-content" class="page-main admin-main"><div class="shell"><div class="admin-heading"><p class="eyebrow">ADMINISTRATION · INQUIRIES</p><h1>문의 관리</h1><p>회원의 공개·비밀 문의를 확인하고 답변하거나 삭제합니다.</p></div><p id="admin-page-message" class="form-message" role="alert"></p><div id="admin-content" hidden><section id="inquiries" class="admin-panel admin-panel-first"><div class="admin-panel-heading"><div><p class="eyebrow">INQUIRIES</p><h2>회원 문의</h2><p>답변 전 문의와 답변이 완료된 문의를 함께 관리합니다.</p></div><button id="refresh-admin-inquiries" class="button button-secondary" type="button">새로고침</button></div><div id="admin-inquiry-list" class="admin-inquiry-list" aria-live="polite"></div></section></div></div></main>
-    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn&amp;Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer><div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <main id="main-content" class="page-main admin-main">
+      <div class="shell">
+        <div class="admin-heading"><p class="eyebrow">ADMINISTRATION · INQUIRIES</p><h1>문의 관리</h1><p>회원의 공개·비밀 문의를 확인하고 답변하거나 삭제합니다.</p></div>
+        <p id="admin-page-message" class="form-message" role="alert" aria-live="assertive"></p>
+        <div id="admin-content" hidden>
+          <section id="inquiries" class="admin-panel admin-panel-first">
+            <div class="admin-panel-heading"><div><p class="eyebrow">INQUIRIES</p><h2>회원 문의</h2><p>답변 전 문의와 답변이 완료된 문의를 함께 관리합니다.</p></div><button id="refresh-admin-inquiries" class="button button-secondary" type="button">새로고침</button></div>
+            <form id="admin-inquiry-filter" class="admin-list-filter" role="search">
+              <div><label for="admin-inquiry-query">제목·작성자 검색</label><input id="admin-inquiry-query" type="search" placeholder="문의 제목 또는 작성자" autocomplete="off" /></div>
+              <div><label for="admin-inquiry-status-filter">답변 상태</label><select id="admin-inquiry-status-filter"><option value="all">전체 상태</option><option value="pending">답변 대기</option><option value="answered">답변 완료</option></select></div>
+              <div><label for="admin-inquiry-visibility-filter">공개 설정</label><select id="admin-inquiry-visibility-filter"><option value="all">전체 글</option><option value="public">공개글</option><option value="secret">비밀글</option></select></div>
+              <button class="button button-primary" type="submit">검색</button><button id="admin-inquiry-filter-reset" class="button button-secondary" type="button">초기화</button>
+              <p id="admin-inquiry-filter-summary" class="admin-list-filter-summary" role="status" aria-live="polite"></p>
+            </form>
+            <div id="admin-inquiry-list" class="admin-inquiry-list" role="status" aria-live="polite"></div>
+            <nav id="admin-inquiry-pagination" class="admin-pagination" aria-label="문의 목록 페이지"></nav>
+          </section>
+        </div>
+      </div>
+    </main>
+    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn &amp; Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer><div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>
 </html>

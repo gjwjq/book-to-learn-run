@@ -24,6 +24,7 @@
   --shadow-soft: 0 8px 28px rgba(74, 48, 32, 0.08);
   --radius: 22px;
   --shell: 1180px;
+  --header-offset: 164px;
 }
 
 /* Reading-room reservation management */
@@ -660,6 +661,428 @@
   }
 }
 
+/* 2026 accessibility and responsive audit fixes */
+html {
+  scroll-padding-top: calc(var(--header-offset) + 16px);
+}
+
+body {
+  min-width: 0;
+  overflow-x: clip;
+}
+
+main,
+.page-main,
+.shell {
+  min-width: 0;
+}
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid #1f6f9f;
+  outline-offset: 3px;
+}
+
+:where(button, input, select, textarea):disabled {
+  cursor: not-allowed;
+}
+
+.skip-link:focus-visible {
+  z-index: 1000;
+  outline-color: #fff;
+}
+
+.site-header {
+  isolation: isolate;
+}
+
+.header-inner,
+.main-nav,
+.nav-inner,
+.auth-area {
+  transition: none;
+}
+
+.main-nav {
+  min-height: 52px;
+}
+
+.nav-inner {
+  min-height: 52px;
+}
+
+.nav-inner a,
+.admin-nav-toggle {
+  white-space: nowrap;
+}
+
+.admin-nav-dropdown {
+  width: min(330px, calc(100vw - 24px));
+  max-height: min(520px, calc(100dvh - var(--header-offset) - 20px));
+  overflow-y: auto;
+}
+
+.inquiry-compose {
+  top: calc(var(--header-offset) + 16px);
+}
+
+.dashboard-section,
+.admin-panel,
+#home-book-request,
+#favorites-section,
+#loans-section,
+#reservations-section,
+#reading-room-section,
+#account-section {
+  scroll-margin-top: calc(var(--header-offset) + 20px);
+}
+
+.recent-search-remove {
+  width: 28px;
+  height: 28px;
+  top: -18px;
+  right: -18px;
+  font-size: 15px;
+  box-shadow: 0 3px 12px rgb(35 22 15 / 22%);
+}
+
+.password-help {
+  margin-top: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbf7f1;
+}
+
+.password-help summary {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  color: var(--brown);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.password-help-content {
+  padding: 0 14px 15px;
+  border-top: 1px solid var(--line);
+}
+
+.password-help-content > p {
+  margin: 13px 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.65;
+}
+
+.password-reset-form {
+  gap: 8px;
+}
+
+.password-reset-form .form-message {
+  min-height: 0;
+  margin: 2px 0 0;
+}
+
+.admin-list-filter {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(145px, 0.38fr) minmax(155px, 0.42fr) auto auto;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 18px;
+  border: 1px solid #ded5cb;
+  border-radius: 12px;
+  background: #faf7f2;
+}
+
+.admin-list-filter label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--brown);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.admin-list-filter input,
+.admin-list-filter select {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid #d2c5b7;
+  border-radius: 9px;
+  background: #fff;
+  font: inherit;
+}
+
+.admin-list-filter .button {
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.admin-list-filter-summary {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.reading-room-scroll-hint {
+  display: none;
+  margin: 15px 0 -8px;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.reading-room-floor:focus-visible {
+  outline-offset: 4px;
+}
+
+.inquiry-image-gallery img,
+.inquiry-image-preview img {
+  content-visibility: auto;
+}
+
+.site-footer,
+.footer-inner {
+  max-width: 100%;
+}
+
+@media (max-width: 1080px) {
+  :root {
+    --header-offset: 194px;
+  }
+
+  .auth-area {
+    width: clamp(220px, 35vw, 310px);
+  }
+
+  .admin-list-filter {
+    grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(145px, 0.45fr));
+  }
+
+  .admin-list-filter .button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 820px) {
+  :root {
+    --header-offset: 188px;
+  }
+
+  .filter-panel,
+  .inquiry-compose {
+    top: auto;
+  }
+
+  .dashboard-tabs {
+    grid-template-columns: repeat(5, minmax(125px, 1fr));
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .dashboard-tabs a {
+    border-bottom: 0;
+  }
+
+  .admin-list-filter {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-list-filter > div:first-child,
+  .admin-list-filter-summary {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  :root {
+    --header-offset: 158px;
+  }
+
+  .site-header {
+    width: 100%;
+  }
+
+  .header-inner {
+    min-height: 102px;
+    align-content: center;
+  }
+
+  .brand-copy strong {
+    font-size: 0.68rem;
+  }
+
+  .brand-copy small {
+    font-size: 0.5rem;
+  }
+
+  .auth-area {
+    width: 148px;
+    min-width: 148px;
+    min-height: 34px;
+  }
+
+  .auth-area:empty::before {
+    height: 34px;
+  }
+
+  .auth-area a,
+  .auth-area button {
+    min-height: 34px;
+    font-size: 0.66rem;
+  }
+
+  .auth-area .user-link {
+    max-width: 62px;
+  }
+
+  .main-nav,
+  .nav-inner {
+    min-height: 48px;
+  }
+
+  .nav-inner {
+    width: 100%;
+    padding-inline: 10px;
+    justify-content: flex-start;
+    gap: 4px;
+    scroll-padding-inline: 10px;
+    scroll-snap-type: x proximity;
+  }
+
+  .nav-inner a,
+  .admin-nav-menu {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  .nav-inner a {
+    min-height: 44px;
+    padding-inline: 11px;
+    font-size: 0.75rem;
+  }
+
+  .admin-nav-toggle {
+    min-height: 40px;
+    padding-inline: 11px;
+    font-size: 0.72rem;
+  }
+
+  .admin-nav-dropdown {
+    max-height: calc(100dvh - var(--header-offset) - 12px);
+  }
+
+  .dashboard-content {
+    padding-bottom: 58px;
+  }
+
+  .dashboard-tabs {
+    margin-top: -24px;
+    grid-template-columns: repeat(5, minmax(112px, 1fr));
+    border-radius: 13px;
+  }
+
+  .dashboard-tabs a {
+    min-height: 58px;
+    padding: 11px 13px;
+    gap: 7px;
+    font-size: 0.72rem;
+  }
+
+  .dashboard-tabs span {
+    font-size: 1rem;
+  }
+
+  .dashboard-tabs b {
+    min-width: 22px;
+    height: 22px;
+    font-size: 0.64rem;
+  }
+
+  .dashboard-section {
+    padding-top: 46px;
+  }
+
+  .account-form {
+    padding: 16px;
+  }
+
+  .account-form input {
+    min-height: 44px;
+  }
+
+  .admin-list-filter {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .admin-list-filter > div:first-child,
+  .admin-list-filter-summary {
+    grid-column: auto;
+  }
+
+  .admin-table-wrap {
+    margin-inline: -8px;
+    padding-inline: 8px;
+    overscroll-behavior-inline: contain;
+  }
+
+  .reading-room-scroll-hint {
+    display: block;
+  }
+
+  .reading-room-floor {
+    width: 100%;
+    max-inline-size: 100%;
+    contain: inline-size;
+    touch-action: pan-x pan-y;
+  }
+
+  .footer-inner {
+    width: min(calc(100% - 28px), var(--shell));
+    min-height: 112px;
+    padding-block: 20px;
+  }
+
+  .footer-inner strong {
+    font-size: 0.82rem;
+  }
+
+  .footer-inner p {
+    font-size: 0.68rem;
+  }
+
+  .recent-search-remove {
+    position: static;
+    margin-left: 3px;
+    opacity: 0.8;
+    transform: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .brand-copy small {
+    display: none;
+  }
+
+  .brand-copy strong {
+    font-size: 0.64rem;
+  }
+
+  .auth-area {
+    width: 138px;
+    min-width: 138px;
+  }
+
+  .nav-inner a {
+    padding-inline: 10px;
+    font-size: 0.72rem;
+  }
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -824,9 +1247,9 @@ img {
   -webkit-backdrop-filter: blur(14px);
 }
 
-/* 권한별 메뉴를 구성하기 전의 짧은 순간에는 불완전한 메뉴를 노출하지 않는다. */
+/* 인증 상태가 늦게 도착해도 메뉴 영역 자체는 유지해 헤더가 흔들리지 않게 한다. */
 .site-header:not(.is-header-ready) .nav-inner {
-  visibility: hidden;
+  visibility: visible;
 }
 
 .header-inner {
@@ -939,11 +1362,19 @@ img {
 }
 
 .auth-area {
-  min-width: 180px;
+  width: clamp(220px, 20vw, 300px);
+  min-width: 220px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.auth-area:empty::before {
+  width: 100%;
+  height: 40px;
+  content: "";
 }
 
 .auth-area a,
@@ -1553,7 +1984,7 @@ img {
   overflow: hidden;
   background:
     linear-gradient(0deg, rgba(54, 31, 20, 0.26), rgba(54, 31, 20, 0.04)),
-    url("image/images/images (50).jpg") center / cover;
+    url("image/hero-library.jpg") center / cover;
   border-radius: 46% 46% 20px 20px;
   box-shadow: var(--shadow);
 }
@@ -2041,7 +2472,7 @@ img {
   color: #fff;
   background:
     linear-gradient(90deg, rgba(61, 35, 23, 0.97), rgba(91, 55, 34, 0.9)),
-    url("image/images/images (43).jpg") center / cover;
+    url("image/page-hero-library.jpg") center / cover;
   border-radius: 24px;
   box-shadow: var(--shadow);
 }
@@ -2110,7 +2541,7 @@ img {
 
 .filter-panel {
   position: sticky;
-  top: 20px;
+  top: calc(var(--header-offset) + 16px);
   overflow: hidden;
   background: var(--paper);
   border: 1px solid var(--line);
@@ -2930,7 +3361,7 @@ img {
 .dashboard-tabs {
   margin-top: -35px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   overflow: hidden;
   position: relative;
   z-index: 2;
@@ -2981,7 +3412,7 @@ img {
 
 .dashboard-section {
   padding-top: 72px;
-  scroll-margin-top: 20px;
+  scroll-margin-top: calc(var(--header-offset) + 20px);
 }
 
 .dashboard-heading {
@@ -6308,5 +6739,29 @@ img {
 
   .notification-list {
     max-height: calc(100vh - 132px);
+  }
+}
+
+/* 320px에서도 동적으로 추가되는 모든 주 메뉴가 잘리지 않도록 최종 크기를 고정한다. */
+@media (max-width: 600px) {
+  .nav-inner,
+  .has-admin-nav .nav-inner {
+    justify-content: space-between;
+    gap: 0;
+    overflow-x: auto;
+    padding-inline: 2px;
+  }
+
+  .nav-inner > a {
+    min-width: 0;
+    padding-inline: 3px;
+    font-size: clamp(0.58rem, 2.7vw, 0.68rem);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .admin-nav-toggle {
+    padding-inline: 5px;
+    font-size: clamp(0.56rem, 2.5vw, 0.66rem);
   }
 }

@@ -7,7 +7,7 @@
     <title>예약 신청 | BOOK TO LEARN &amp; RUN</title>
     <link rel="icon" href="image/logo.png" type="image/png" />
     <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0" defer></script>
     <script src="config.js" defer></script>
     <script src="supabase-client.js" defer></script>
     <script src="app.js" defer></script>
@@ -20,13 +20,13 @@
         <form class="header-search" role="search"><label class="sr-only" for="header-search-reserve">도서 검색</label><input id="header-search-reserve" name="q" type="search" placeholder="책 제목, 저자, 키워드 검색" /><button type="submit" aria-label="검색"><span aria-hidden="true">⌕</span><span class="search-text">검색</span></button></form>
         <div class="auth-area" data-auth-area></div>
       </div>
-      <nav class="main-nav" aria-label="주요 메뉴"><div class="nav-inner"><a href="index.html">홈</a><a class="active" href="search.html">도서검색</a><a href="mypage.html">마이페이지</a></div></nav>
+      <nav class="main-nav" aria-label="주요 메뉴"><div class="nav-inner"><a href="index.html">홈</a><a class="active" aria-current="location" href="search.html">도서검색</a><a href="mypage.html">마이페이지</a></div></nav>
     </header>
     <main id="main-content" class="page-main">
       <section class="page-hero small"><div class="shell"><p class="eyebrow">BOOK RESERVATION</p><h1>예약 신청</h1><p>읽고 싶은 책이 돌아오면 가장 먼저 알려드릴게요.</p></div></section>
       <section class="shell reserve-layout" id="reserve-content" aria-live="polite"></section>
     </main>
-    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn&amp;Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
+    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn &amp; Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>
 </html>

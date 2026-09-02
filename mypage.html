@@ -7,7 +7,7 @@
     <title>마이페이지 | BOOK TO LEARN &amp; RUN</title>
     <link rel="icon" href="image/logo.png" type="image/png" />
     <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0" defer></script>
     <script src="config.js" defer></script>
     <script src="supabase-client.js" defer></script>
     <script src="app.js" defer></script>
@@ -20,7 +20,7 @@
         <form class="header-search" role="search"><label class="sr-only" for="header-search-mypage">도서 검색</label><input id="header-search-mypage" name="q" type="search" placeholder="책 제목, 저자, 키워드 검색" /><button type="submit" aria-label="검색"><span aria-hidden="true">⌕</span><span class="search-text">검색</span></button></form>
         <div class="auth-area" data-auth-area></div>
       </div>
-      <nav class="main-nav" aria-label="주요 메뉴"><div class="nav-inner"><a href="index.html">홈</a><a href="search.html">도서검색</a><a class="active" href="mypage.html">마이페이지</a></div></nav>
+      <nav class="main-nav" aria-label="주요 메뉴"><div class="nav-inner"><a href="index.html">홈</a><a href="search.html">도서검색</a><a class="active" aria-current="page" href="mypage.html">마이페이지</a></div></nav>
     </header>
     <main id="main-content" class="page-main dashboard-main">
       <section class="dashboard-hero">
@@ -29,7 +29,7 @@
       <section class="shell dashboard-content">
         <nav class="dashboard-tabs" aria-label="마이페이지 바로가기">
           <a href="#favorites-section"><span>♡</span>찜한 도서 <b id="favorite-count">0</b></a>
-          <a href="#loans-section"><span>↗</span>대여한 도서 <b id="loan-count">0</b></a>
+          <a href="#loans-section"><span>↗</span>대출한 도서 <b id="loan-count">0</b></a>
           <a href="#reservations-section"><span>⌚</span>예약한 도서 <b id="reservation-count">0</b></a>
           <a href="#reading-room-section"><span>⌑</span>열람실 예약 <b id="reading-room-count">0</b></a>
           <a href="#account-section"><span>⚙</span>회원정보</a>
@@ -62,7 +62,7 @@
           <div class="my-list" id="favorite-list" aria-live="polite"></div>
         </section>
         <section class="dashboard-section" id="loans-section">
-          <div class="dashboard-heading"><div><p class="eyebrow">MY LOANS</p><h2>대여한 도서</h2></div><a href="search.html?status=%EB%8C%80%EC%B6%9C%20%EA%B0%80%EB%8A%A5">대출 가능 도서 보기 →</a></div>
+          <div class="dashboard-heading"><div><p class="eyebrow">MY LOANS</p><h2>대출한 도서</h2></div><a href="search.html?status=%EB%8C%80%EC%B6%9C%20%EA%B0%80%EB%8A%A5">대출 가능 도서 보기 →</a></div>
           <div class="my-list" id="loan-list" aria-live="polite"></div>
         </section>
         <section class="dashboard-section" id="reservations-section">
@@ -75,7 +75,7 @@
         </section>
       </section>
     </main>
-    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn&amp;Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
+    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn &amp; Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>
 </html>

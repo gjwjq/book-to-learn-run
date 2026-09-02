@@ -1,8 +1,55 @@
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://khbnqkkxhcluqczxvdyv.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_QnlhzDiZqQyV1DSf_uKUVA_0XuNS6LN";
+const SUPABASE_URL = String(process.env.SUPABASE_URL || "").replace(/\/$/, "");
+const SUPABASE_PUBLISHABLE_KEY = String(process.env.SUPABASE_PUBLISHABLE_KEY || "");
 const BOOK_CATEGORIES = ["자기계발", "진로/취업", "소설", "인문", "경제", "IT", "에세이", "만화"];
+const METADATA_RATE_WINDOW_MS = 60 * 1000;
+const METADATA_RATE_MAX_REQUESTS = 15;
+const METADATA_CACHE_TTL_MS = 10 * 60 * 1000;
+const metadataAttempts = new Map();
+const metadataCache = new Map();
+
+function consumeMetadataAttempt(userId) {
+  const now = Date.now();
+  if (metadataAttempts.size > 5000) {
+    for (const [storedUserId, attempt] of metadataAttempts) {
+      if (attempt.resetAt <= now) metadataAttempts.delete(storedUserId);
+    }
+  }
+  const current = metadataAttempts.get(userId);
+  if (!current || current.resetAt <= now) {
+    metadataAttempts.set(userId, { count: 1, resetAt: now + METADATA_RATE_WINDOW_MS });
+    return { allowed: true, retryAfter: 0 };
+  }
+  current.count += 1;
+  if (current.count > METADATA_RATE_MAX_REQUESTS) {
+    return {
+      allowed: false,
+      retryAfter: Math.max(Math.ceil((current.resetAt - now) / 1000), 1),
+    };
+  }
+  return { allowed: true, retryAfter: 0 };
+}
+
+function readMetadataCache(cacheKey) {
+  const cached = metadataCache.get(cacheKey);
+  if (!cached || cached.expiresAt <= Date.now()) {
+    if (cached) metadataCache.delete(cacheKey);
+    return null;
+  }
+  return cached.value;
+}
+
+function writeMetadataCache(cacheKey, value) {
+  if (metadataCache.size >= 100) {
+    for (const [key, cached] of metadataCache) {
+      if (cached.expiresAt <= Date.now()) metadataCache.delete(key);
+    }
+    if (metadataCache.size >= 100) metadataCache.delete(metadataCache.keys().next().value);
+  }
+  metadataCache.set(cacheKey, { value, expiresAt: Date.now() + METADATA_CACHE_TTL_MS });
+}
 
 async function getAdminUser(authorization) {
+  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) return null;
   if (!authorization?.startsWith("Bearer ")) return null;
   const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
     headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: authorization },
@@ -18,30 +65,78 @@ async function getAdminUser(authorization) {
   return profiles[0]?.role === "admin" ? user : null;
 }
 
-function finishDescription(value, fallback) {
-  const description = String(value || "").replace(/\s+/g, " ").trim().replace(/\.{2,}|…+$/g, "").trim();
-  const lastSentenceEnd = Math.max(
-    description.lastIndexOf("."),
-    description.lastIndexOf("!"),
-    description.lastIndexOf("?"),
-    description.lastIndexOf("。"),
-    description.lastIndexOf("！"),
-    description.lastIndexOf("？"),
+function finishDescription(value, fallback, maxLength = Number.POSITIVE_INFINITY) {
+  const description = String(value || "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/(?:\.{2,}|…+|⋯+)\s*$/g, "")
+    .trim();
+  if (description && /(다|요|임|됨|함|니다|습니다|이다|예요|이에요)$/.test(description)) {
+    const completed = `${description}.`;
+    if (completed.length <= maxLength) return completed;
+  }
+  const endCharacters = [".", "!", "?", "。", "！", "？"];
+  const searchLimit = Math.min(description.length, maxLength) - 1;
+  const lastSentenceEnd = endCharacters.reduce(
+    (latest, character) => Math.max(latest, description.lastIndexOf(character, searchLimit)),
+    -1,
   );
   if (lastSentenceEnd >= 10) return description.slice(0, lastSentenceEnd + 1).trim();
   return fallback;
 }
 
+function preserveOriginalDescription(value, fallback) {
+  const description = String(value || "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!description) return fallback;
+  if (/[.!?。！？]$/.test(description)) return description;
+  if (/(다|요|임|됨|함|니다|습니다|이다|예요|이에요)$/.test(description)) {
+    return `${description}.`;
+  }
+  if (/(?:\.{2,}|…+|⋯+)\s*$/.test(description)) {
+    const withoutEllipsis = description.replace(/(?:\.{2,}|…+|⋯+)\s*$/g, "").trim();
+    const lastSentenceEnd = [".", "!", "?", "。", "！", "？"].reduce(
+      (latest, character) => Math.max(latest, withoutEllipsis.lastIndexOf(character)),
+      -1,
+    );
+    if (lastSentenceEnd >= 10) return withoutEllipsis.slice(0, lastSentenceEnd + 1).trim();
+  }
+  return description;
+}
+
 module.exports = async function handler(request, response) {
+  response.setHeader("Cache-Control", "no-store");
+
   if (request.method !== "POST") {
     response.setHeader("Allow", "POST");
     return response.status(405).json({ message: "POST 요청만 사용할 수 있습니다." });
   }
 
-  const admin = await getAdminUser(request.headers.authorization);
+  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+    return response.status(503).json({ message: "도서 정보 생성 서버 설정이 완료되지 않았습니다." });
+  }
+
+  let admin;
+  try {
+    admin = await getAdminUser(request.headers.authorization);
+  } catch {
+    return response.status(502).json({ message: "관리자 인증 서버에 연결할 수 없습니다." });
+  }
   if (!admin) return response.status(403).json({ message: "관리자 권한이 필요합니다." });
   if (!process.env.GEMINI_API_KEY) {
     return response.status(503).json({ message: "Vercel에 GEMINI_API_KEY 환경변수를 먼저 등록해 주세요." });
+  }
+
+  const rateLimit = consumeMetadataAttempt(admin.id || "unknown");
+  if (!rateLimit.allowed) {
+    response.setHeader("Retry-After", String(rateLimit.retryAfter));
+    return response.status(429).json({
+      message: "AI 도서 정보 생성 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+      retryable: true,
+    });
   }
 
   const input = request.body || {};
@@ -52,9 +147,27 @@ module.exports = async function handler(request, response) {
   if (!title || !author) return response.status(400).json({ message: "제목과 저자가 필요합니다." });
 
   const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
-  const apiResponse = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-    {
+  const normalizedInput = {
+    title,
+    author,
+    publisher: String(input.publisher || "").trim().slice(0, 120),
+    publishedDate: String(input.publishedDate || "").trim().slice(0, 10),
+    description: String(input.description || "").trim().slice(0, 1200),
+    shortDescription: String(input.shortDescription || "").trim().slice(0, 300),
+    category,
+  };
+  const cacheKey = JSON.stringify({ model, ...normalizedInput });
+  const cachedPayload = readMetadataCache(cacheKey);
+  if (cachedPayload) {
+    response.setHeader("X-Book-Metadata-Cache", "HIT");
+    return response.status(200).json(cachedPayload);
+  }
+
+  let apiResponse;
+  try {
+    apiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      {
     method: "POST",
     headers: {
       "x-goog-api-key": process.env.GEMINI_API_KEY,
@@ -83,13 +196,7 @@ module.exports = async function handler(request, response) {
         role: "user",
         parts: [{
           text: JSON.stringify({
-            title,
-            author,
-            publisher: String(input.publisher || "").trim().slice(0, 120),
-            publishedDate: String(input.publishedDate || "").trim(),
-            description: String(input.description || "").trim().slice(0, 1200),
-            shortDescription: String(input.shortDescription || "").trim().slice(0, 300),
-            category,
+            ...normalizedInput,
           }),
         }],
       }],
@@ -111,7 +218,15 @@ module.exports = async function handler(request, response) {
         maxOutputTokens: 2000,
       },
     }),
-  });
+      },
+    );
+  } catch {
+    return response.status(503).json({
+      message: "AI 도서 정보 생성 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+      retryable: true,
+      enrichment: { status: "failed", reason: "ai_network_error" },
+    });
+  }
 
   const result = await apiResponse.json();
   if (!apiResponse.ok) {
@@ -121,6 +236,7 @@ module.exports = async function handler(request, response) {
       message: result.error?.message || "Gemini API 요청에 실패했습니다.",
       retryable,
       upstreamStatus: apiResponse.status,
+      enrichment: { status: "failed", reason: "ai_upstream_error" },
     });
   }
 
@@ -131,10 +247,31 @@ module.exports = async function handler(request, response) {
     if (!outputText) throw new Error("empty response");
     const metadata = JSON.parse(outputText);
     const genericDescription = `${author}의 『${title}』입니다.`;
-    metadata.description = finishDescription(metadata.description, genericDescription);
-    metadata.shortDescription = finishDescription(metadata.shortDescription, genericDescription);
-    return response.status(200).json(metadata);
+    const sourceDescription = preserveOriginalDescription(normalizedInput.description, genericDescription);
+    const rawDescription = String(metadata.description || "").trim();
+    const rawShortDescription = String(metadata.shortDescription || "").trim();
+    metadata.description = finishDescription(rawDescription, sourceDescription, Number.POSITIVE_INFINITY);
+    metadata.shortDescription = finishDescription(
+      rawShortDescription,
+      finishDescription(sourceDescription, genericDescription, 110),
+      110,
+    );
+    const usedFallback = metadata.description === sourceDescription
+      || metadata.shortDescription === genericDescription;
+    const payload = {
+      ...metadata,
+      enrichment: {
+        status: usedFallback ? "partial" : "complete",
+        reason: usedFallback ? "incomplete_ai_description_repaired" : null,
+      },
+    };
+    writeMetadataCache(cacheKey, payload);
+    response.setHeader("X-Book-Metadata-Cache", "MISS");
+    return response.status(200).json(payload);
   } catch {
-    return response.status(502).json({ message: "AI 응답을 도서 정보로 변환하지 못했습니다." });
+    return response.status(502).json({
+      message: "AI 응답을 도서 정보로 변환하지 못했습니다.",
+      enrichment: { status: "failed", reason: "ai_response_invalid" },
+    });
   }
 };

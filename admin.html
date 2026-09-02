@@ -19,7 +19,7 @@
         window.location.replace(routes[section] || routes.users);
       })();
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0" defer></script>
     <script src="config.js" defer></script>
     <script src="supabase-client.js" defer></script>
     <script src="app.js" defer></script>
@@ -41,7 +41,7 @@
         <div id="admin-content" hidden>
           <section id="users" class="admin-panel">
             <div class="admin-panel-heading"><div><p class="eyebrow">MEMBERS</p><h2>유저 관리</h2></div><button id="refresh-users" class="button button-secondary" type="button">새로고침</button></div>
-            <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>아이디</th><th>이름</th><th>이메일</th><th>권한</th><th>가입일</th><th>최근 로그인</th><th>관리</th></tr></thead><tbody id="admin-user-list"></tbody></table></div>
+            <div class="admin-table-wrap"><table class="admin-table"><caption class="sr-only">도서관 회원 정보와 권한 관리 목록</caption><thead><tr><th scope="col">아이디</th><th scope="col">이름</th><th scope="col">이메일</th><th scope="col">권한</th><th scope="col">가입일</th><th scope="col">최근 로그인</th><th scope="col">관리</th></tr></thead><tbody id="admin-user-list"></tbody></table></div>
             <nav id="admin-user-pagination" class="admin-pagination" aria-label="유저 목록 페이지"></nav>
           </section>
           <section id="books" class="admin-panel" hidden>
@@ -118,8 +118,8 @@
         </div>
       </div>
     </main>
-    <dialog id="book-edit-dialog" class="admin-dialog">
-      <div class="admin-dialog-heading"><div><p class="eyebrow">EDIT BOOK</p><h2>도서 정보 수정</h2></div><button id="close-book-edit" class="dialog-close" type="button" aria-label="닫기">×</button></div>
+    <dialog id="book-edit-dialog" class="admin-dialog" aria-labelledby="book-edit-title" aria-describedby="admin-book-edit-message">
+      <div class="admin-dialog-heading"><div><p class="eyebrow">EDIT BOOK</p><h2 id="book-edit-title">도서 정보 수정</h2></div><button id="close-book-edit" class="dialog-close" type="button" aria-label="도서 정보 수정 창 닫기">×</button></div>
       <p id="admin-book-edit-message" class="form-message dialog-form-message" role="alert" aria-live="assertive"></p>
       <form id="admin-book-edit-form" class="admin-book-form">
         <input type="hidden" name="originalId" />
@@ -141,7 +141,7 @@
         <div class="admin-form-actions"><button id="save-book-edit" class="button button-primary" type="submit">저장</button><button id="cancel-book-edit" class="button button-secondary" type="button">취소</button></div>
       </form>
     </dialog>
-    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn&amp;Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
+    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn &amp; Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>
 </html>

@@ -7,7 +7,7 @@
     <title>열람실 예약 | BOOK TO LEARN &amp; RUN</title>
     <link rel="icon" href="image/logo.png" type="image/png" />
     <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0" defer></script>
     <script src="config.js" defer></script>
     <script src="supabase-client.js" defer></script>
     <script src="app.js" defer></script>
@@ -20,15 +20,15 @@
         <form class="header-search" role="search"><label class="sr-only" for="header-search-reading-room">도서 검색</label><input id="header-search-reading-room" name="q" type="search" placeholder="책 제목, 저자, 키워드 검색" /><button type="submit" aria-label="검색"><span aria-hidden="true">⌕</span><span class="search-text">검색</span></button></form>
         <div class="auth-area" data-auth-area></div>
       </div>
-      <nav class="main-nav" aria-label="주요 메뉴"><div class="nav-inner"><a href="index.html">홈</a><a href="search.html">도서검색</a><a class="active reading-room-nav-link" href="reading-room.html">열람실 예약</a><a href="mypage.html">마이페이지</a></div></nav>
+      <nav class="main-nav" aria-label="주요 메뉴"><div class="nav-inner"><a href="index.html">홈</a><a href="search.html">도서검색</a><a class="active reading-room-nav-link" aria-current="page" href="reading-room.html">열람실 예약</a><a href="mypage.html">마이페이지</a></div></nav>
     </header>
 
     <main id="main-content" class="page-main reading-room-main">
       <section class="page-hero small"><div class="shell"><p class="eyebrow">READING ROOM</p><h1>열람실 예약</h1><p>운영시간 안에서 원하는 시간과 좌석을 직접 선택하세요.</p></div></section>
-      <section class="shell reading-room-content" id="reading-room-content" aria-live="polite">
+      <section class="shell reading-room-content" id="reading-room-content">
         <section class="reading-room-booking">
           <div class="reading-room-heading"><div><p class="eyebrow">SEAT MAP</p><h2>좌석 선택</h2></div><div class="seat-legend"><span><i class="available"></i>선택 가능</span><span><i class="selected"></i>선택 좌석</span><span><i class="occupied"></i>예약 완료</span></div></div>
-          <form id="reading-room-filter" class="reading-room-filter">
+          <div id="reading-room-filter" class="reading-room-filter" role="group" aria-label="열람실 이용 날짜와 시간 선택">
             <div><label for="reading-room-date">이용 날짜</label><input id="reading-room-date" name="date" type="date" required /></div>
             <div class="reading-room-time-field">
               <label for="reading-room-start-time">이용 시간 <small>최소 2시간 · 최대 6시간</small></label>
@@ -40,11 +40,12 @@
               </div>
             </div>
             <p class="reading-room-filter-guide">06:00~22:00 운영 · 좌석을 직접 최대 4개까지 선택할 수 있습니다.</p>
-          </form>
-          <div class="reading-room-floor" aria-label="위에서 내려다본 열람실 좌석 배치도">
+          </div>
+          <p class="reading-room-scroll-hint">좌석 배치도가 화면보다 넓으면 좌우로 밀어 확인하세요.</p>
+          <div class="reading-room-floor" role="region" tabindex="0" aria-label="위에서 내려다본 열람실 좌석 배치도. 좌우로 스크롤할 수 있습니다.">
             <div class="reading-room-shelf reading-room-shelf-top" aria-hidden="true"><span>자료 서가</span><i></i><i></i><i></i><i></i><i></i><i></i></div>
             <div class="reading-room-shelf reading-room-shelf-left" aria-hidden="true"><span>BOOKS</span></div>
-            <div id="reading-room-seat-grid" class="reading-room-seat-grid" aria-label="열람실 60개 좌석"></div>
+            <div id="reading-room-seat-grid" class="reading-room-seat-grid" role="group" aria-label="열람실 60개 좌석"></div>
             <div class="reading-room-shelf reading-room-shelf-right" aria-hidden="true"><span>BOOKS</span></div>
             <div class="reading-room-floor-footer" aria-hidden="true"><span class="reading-room-return-desk">도서 반납대</span><span class="reading-room-front">안내 데스크</span><span class="reading-room-entrance">출입구</span></div>
           </div>
@@ -53,12 +54,12 @@
 
         <aside class="reading-room-my-list">
           <div class="reading-room-heading"><div><p class="eyebrow">MY SCHEDULE</p><h2>내 열람실 예약</h2></div><button id="refresh-reading-room" class="button button-secondary" type="button">새로고침</button></div>
-          <div id="reading-room-reservation-list" class="room-reservation-list"></div>
+          <div id="reading-room-reservation-list" class="room-reservation-list" role="status" aria-live="polite"></div>
         </aside>
       </section>
     </main>
 
-    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn&amp;Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
+    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn &amp; Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>
 </html>

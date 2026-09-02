@@ -297,6 +297,8 @@ let notificationPollTimer = null;
 let notificationRealtimeChannel = null;
 let adminUserPage = 1;
 let adminBookPage = 1;
+let adminBookSearchQuery = "";
+let adminBookSort = "newest";
 const adminSelectedBookIds = new Set();
 const ADMIN_PAGE_SIZE = 20;
 const MAX_ACTIVE_BOOK_RESERVATIONS = 10;
@@ -1197,10 +1199,10 @@ function renderAuthArea() {
     }
 
     const adminNavigationItems = [
-      { href: "admin.html#users", label: "회원 관리", section: "users", icon: "♙" },
-      { href: "admin.html#books", label: "도서 관리", section: "books", icon: "▤" },
-      { href: "admin.html#room-reservations", label: "열람실 관리", section: "room-reservations", icon: "⌑" },
-      { href: "admin.html#inquiries", label: "문의 관리", section: "inquiries", icon: "✉" },
+      { href: "admin-users.html", label: "회원 관리", section: "users", icon: "♙" },
+      { href: "admin-books.html", label: "도서 관리", section: "books", icon: "▤" },
+      { href: "admin-reading-room.html", label: "열람실 관리", section: "room-reservations", icon: "⌑" },
+      { href: "admin-inquiries.html", label: "문의 관리", section: "inquiries", icon: "✉" },
     ];
 
     if (user?.role === "admin") {
@@ -1244,7 +1246,7 @@ function renderAuthArea() {
 
 function getSafeNotificationLink(value) {
   const link = String(value || "").trim();
-  return /^(index|search|detail|reserve|mypage|admin|request|reading-room|inquiry)\.html(?:[?#].*)?$/.test(link)
+  return /^(index|search|detail|reserve|mypage|admin|admin-users|admin-books|admin-reading-room|admin-inquiries|request|reading-room|inquiry)\.html(?:[?#].*)?$/.test(link)
     ? link
     : "mypage.html";
 }
@@ -1529,7 +1531,9 @@ function updateAdminNavigationState() {
   const supportedSections = new Set(["users", "books", "room-reservations", "inquiries"]);
   const hashSection = window.location.hash.replace(/^#/, "");
   const activeSection = getCurrentPage() === "admin"
-    ? supportedSections.has(hashSection) ? hashSection : "users"
+    ? supportedSections.has(document.body?.dataset.adminSection)
+      ? document.body.dataset.adminSection
+      : supportedSections.has(hashSection) ? hashSection : "users"
     : "";
   document.querySelectorAll("[data-admin-nav]").forEach((link) => {
     link.classList.toggle("active", link.dataset.adminNav === activeSection);
@@ -1706,7 +1710,7 @@ async function initHomeBookRequest() {
       <div class="home-request-gate">
         <strong>회원의 도서 추가 요청을 확인하세요.</strong>
         <p>관리자는 요청을 승인해 도서 목록에 바로 추가할 수 있습니다.</p>
-        <a class="button button-primary" href="admin.html#books">요청 관리로 이동</a>
+        <a class="button button-primary" href="admin-books.html">요청 관리로 이동</a>
       </div>
     `;
     return;
@@ -2107,6 +2111,19 @@ async function initAdminPage() {
   const user = getCurrentUser();
   const pageMessage = document.getElementById("admin-page-message");
   const content = document.getElementById("admin-content");
+  const legacyAdminRoutes = {
+    users: "admin-users.html",
+    books: "admin-books.html",
+    "room-reservations": "admin-reading-room.html",
+    inquiries: "admin-inquiries.html",
+  };
+  const legacySection = window.location.hash.replace(/^#/, "");
+  const isLegacyAdminPage = /(?:^|\/)admin\.html$/.test(window.location.pathname);
+
+  if (isLegacyAdminPage) {
+    window.location.replace(legacyAdminRoutes[legacySection] || legacyAdminRoutes.users);
+    return;
+  }
 
   if (!user) {
     sessionStorage.setItem("btlr_login_notice", "관리자 로그인 후 이용할 수 있습니다.");
@@ -2119,14 +2136,14 @@ async function initAdminPage() {
   }
 
   if (content) content.hidden = false;
-  await seedDefaultBooksIfEmpty();
-  await Promise.all([
-    renderAdminUsers(),
-    renderAdminBooks(),
-    renderAdminBookRequests(),
-    renderAdminRoomReservations(),
-    renderAdminInquiries(),
-  ]);
+  const adminSection = document.body.dataset.adminSection || "users";
+  if (adminSection === "users") await renderAdminUsers();
+  if (adminSection === "books") {
+    await seedDefaultBooksIfEmpty();
+    await Promise.all([renderAdminBooks(), renderAdminBookRequests()]);
+  }
+  if (adminSection === "room-reservations") await renderAdminRoomReservations();
+  if (adminSection === "inquiries") await renderAdminInquiries();
 
   document.getElementById("refresh-users")?.addEventListener("click", renderAdminUsers);
   document.getElementById("refresh-book-requests")?.addEventListener("click", renderAdminBookRequests);
@@ -2147,6 +2164,10 @@ async function initAdminPage() {
   document.getElementById("admin-book-select-page")?.addEventListener("change", toggleAdminBookPageSelection);
   document.getElementById("admin-book-clear-selection")?.addEventListener("click", clearAdminBookSelection);
   document.getElementById("admin-book-delete-selected")?.addEventListener("click", deleteSelectedAdminBooks);
+  document.getElementById("admin-book-filter")?.addEventListener("submit", handleAdminBookFilter);
+  document.getElementById("admin-book-query")?.addEventListener("input", handleAdminBookFilterInput);
+  document.getElementById("admin-book-sort")?.addEventListener("change", handleAdminBookSortChange);
+  document.getElementById("admin-book-filter-reset")?.addEventListener("click", resetAdminBookFilter);
   document.getElementById("admin-user-pagination")?.addEventListener("click", handleAdminPagination);
   document.getElementById("admin-book-pagination")?.addEventListener("click", handleAdminPagination);
   document.getElementById("admin-book-request-list")?.addEventListener("click", handleAdminBookRequestAction);
@@ -2156,7 +2177,7 @@ async function initAdminPage() {
   document.getElementById("curated-book-import")?.addEventListener("click", importCuratedCategoryBooks);
   document.getElementById("repair-book-categories")?.addEventListener("click", repairExistingBookCategories);
   document.querySelectorAll("#admin-book-form, #admin-book-edit-form").forEach(bindBookFormEnhancements);
-  await restoreAdminBookDraft();
+  if (adminSection === "books") await restoreAdminBookDraft();
 }
 
 async function seedDefaultBooksIfEmpty() {
@@ -2882,16 +2903,90 @@ async function renderAdminBooks() {
   renderAdminBookPage();
 }
 
+function getFilteredAdminBooks() {
+  const normalizedQuery = adminBookSearchQuery.trim().toLocaleLowerCase("ko-KR");
+  const filteredBooks = getBooks().filter((book) => {
+    if (!normalizedQuery) return true;
+    return [book.title, book.author]
+      .some((value) => String(value || "").toLocaleLowerCase("ko-KR").includes(normalizedQuery));
+  });
+
+  const collator = new Intl.Collator("ko-KR", { numeric: true, sensitivity: "base" });
+  return filteredBooks.sort((firstBook, secondBook) => {
+    if (adminBookSort === "title") return collator.compare(firstBook.title || "", secondBook.title || "");
+    if (adminBookSort === "author") return collator.compare(firstBook.author || "", secondBook.author || "");
+    if (adminBookSort === "category") {
+      return collator.compare(firstBook.category || "", secondBook.category || "")
+        || collator.compare(firstBook.title || "", secondBook.title || "");
+    }
+    if (adminBookSort === "stock-low") {
+      return Number(firstBook.availableQuantity || 0) - Number(secondBook.availableQuantity || 0)
+        || collator.compare(firstBook.title || "", secondBook.title || "");
+    }
+    if (adminBookSort === "stock-high") {
+      return Number(secondBook.availableQuantity || 0) - Number(firstBook.availableQuantity || 0)
+        || collator.compare(firstBook.title || "", secondBook.title || "");
+    }
+    return new Date(secondBook.createdAt || 0) - new Date(firstBook.createdAt || 0);
+  });
+}
+
+function updateAdminBookFilterSummary(filteredCount) {
+  const summary = document.getElementById("admin-book-filter-summary");
+  if (!summary) return;
+  const totalCount = getBooks().length;
+  summary.textContent = adminBookSearchQuery
+    ? `전체 ${totalCount}권 중 ${filteredCount}권을 찾았습니다.`
+    : `전체 ${totalCount}권`;
+}
+
+function applyAdminBookFilter() {
+  adminBookPage = 1;
+  adminSelectedBookIds.clear();
+  renderAdminBookPage();
+}
+
+function handleAdminBookFilter(event) {
+  event.preventDefault();
+  adminBookSearchQuery = String(document.getElementById("admin-book-query")?.value || "").trim();
+  applyAdminBookFilter();
+}
+
+function handleAdminBookFilterInput(event) {
+  adminBookSearchQuery = String(event.currentTarget.value || "").trim();
+  applyAdminBookFilter();
+}
+
+function handleAdminBookSortChange(event) {
+  adminBookSort = event.currentTarget.value || "newest";
+  applyAdminBookFilter();
+}
+
+function resetAdminBookFilter() {
+  const queryInput = document.getElementById("admin-book-query");
+  const sortSelect = document.getElementById("admin-book-sort");
+  if (queryInput) queryInput.value = "";
+  if (sortSelect) sortSelect.value = "newest";
+  adminBookSearchQuery = "";
+  adminBookSort = "newest";
+  applyAdminBookFilter();
+  queryInput?.focus();
+}
+
 function renderAdminBookPage() {
   const target = document.getElementById("admin-book-list");
   if (!target) return;
-  const books = getBooks();
-  const existingIds = new Set(books.map((book) => book.id));
+  const allBooks = getBooks();
+  const books = getFilteredAdminBooks();
+  const existingIds = new Set(allBooks.map((book) => book.id));
   [...adminSelectedBookIds].forEach((id) => {
     if (!existingIds.has(id)) adminSelectedBookIds.delete(id);
   });
+  updateAdminBookFilterSummary(books.length);
   if (!books.length) {
-    target.innerHTML = '<p class="admin-empty">등록된 도서가 없습니다.</p>';
+    target.innerHTML = adminBookSearchQuery
+      ? '<p class="admin-empty">제목 또는 저자와 일치하는 도서가 없습니다.</p>'
+      : '<p class="admin-empty">등록된 도서가 없습니다.</p>';
     renderAdminPagination("books", 0);
     updateAdminBookBulkToolbar([]);
     return;
@@ -2915,7 +3010,7 @@ function renderAdminBookPage() {
 }
 
 function getVisibleAdminBooks() {
-  const books = getBooks();
+  const books = getFilteredAdminBooks();
   const startIndex = (adminBookPage - 1) * ADMIN_PAGE_SIZE;
   return books.slice(startIndex, startIndex + ADMIN_PAGE_SIZE);
 }
@@ -4209,7 +4304,7 @@ function initInquiryPage() {
   if (!user && compose) {
     compose.innerHTML = '<div class="inquiry-section-heading"><p class="eyebrow">NEW INQUIRY</p><h2>문의 작성</h2></div><div class="request-empty compact"><span>✉</span><strong>로그인 후 문의를 작성할 수 있습니다.</strong><p>문의 게시판은 로그인하지 않아도 확인할 수 있습니다.</p><a class="button button-primary" href="login.html?next=inquiry.html">로그인하고 문의하기</a></div>';
   } else if (user?.role === "admin" && compose) {
-    compose.innerHTML = '<div class="inquiry-section-heading"><p class="eyebrow">ADMIN</p><h2>문의 답변 관리</h2></div><div class="request-empty compact"><span>✉</span><strong>관리자 문의 관리에서 답변할 수 있습니다.</strong><p>공개 게시판에서는 등록된 답변 결과를 확인합니다.</p><a class="button button-primary" href="admin.html#inquiries">문의 관리로 이동</a></div>';
+    compose.innerHTML = '<div class="inquiry-section-heading"><p class="eyebrow">ADMIN</p><h2>문의 답변 관리</h2></div><div class="request-empty compact"><span>✉</span><strong>관리자 문의 관리에서 답변할 수 있습니다.</strong><p>공개 게시판에서는 등록된 답변 결과를 확인합니다.</p><a class="button button-primary" href="admin-inquiries.html">문의 관리로 이동</a></div>';
   } else if (form) {
     form.addEventListener("submit", submitInquiry);
     form.elements.content?.addEventListener("input", () => {
@@ -4365,7 +4460,7 @@ async function initBookRequestPage() {
           <span>!</span>
           <strong>관리자는 회원 요청을 관리하는 계정입니다.</strong>
           <p>관리자 페이지에서 회원의 도서 요청을 확인해 주세요.</p>
-          <a class="button button-primary" href="admin.html#books">요청 관리로 이동</a>
+          <a class="button button-primary" href="admin-books.html">요청 관리로 이동</a>
         </div>
       `;
     }

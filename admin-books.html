@@ -3,64 +3,58 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="BOOK TO LEARN &amp; RUN 관리자" />
-    <title>관리자 | BOOK TO LEARN &amp; RUN</title>
+    <meta name="description" content="BOOK TO LEARN &amp; RUN 관리자 도서 관리" />
+    <title>도서 관리 | BOOK TO LEARN &amp; RUN</title>
     <link rel="icon" href="image/logo.png" type="image/png" />
     <link rel="stylesheet" href="style.css" />
-    <script>
-      (() => {
-        const routes = {
-          users: "admin-users.html",
-          books: "admin-books.html",
-          "room-reservations": "admin-reading-room.html",
-          inquiries: "admin-inquiries.html",
-        };
-        const section = window.location.hash.replace(/^#/, "");
-        window.location.replace(routes[section] || routes.users);
-      })();
-    </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="config.js" defer></script>
     <script src="supabase-client.js" defer></script>
     <script src="app.js" defer></script>
   </head>
-  <body data-page="admin" data-admin-section="users">
+  <body data-page="admin" data-admin-section="books">
     <a class="skip-link" href="#main-content">본문 바로가기</a>
     <header class="site-header">
       <div class="header-inner">
         <a class="brand" href="index.html" aria-label="BOOK TO LEARN &amp; RUN 홈"><span class="brand-mark" aria-hidden="true"><span></span></span><span class="brand-copy"><strong>BOOK TO LEARN &amp; RUN</strong><small>PUBLIC LIBRARY SERVICE</small></span></a>
-        <form class="header-search" role="search"><label class="sr-only" for="header-search-admin">도서 검색</label><input id="header-search-admin" name="q" type="search" placeholder="책 제목, 저자, 키워드 검색" /><button type="submit" aria-label="검색"><span aria-hidden="true">⌕</span><span class="search-text">검색</span></button></form>
+        <form class="header-search" role="search"><label class="sr-only" for="header-search-admin-books">도서 검색</label><input id="header-search-admin-books" name="q" type="search" placeholder="책 제목, 저자, 키워드 검색" /><button type="submit" aria-label="검색"><span aria-hidden="true">⌕</span><span class="search-text">검색</span></button></form>
         <div class="auth-area" data-auth-area></div>
       </div>
       <nav class="main-nav" aria-label="주요 메뉴"><div class="nav-inner"><a href="index.html">홈</a><a href="search.html">도서검색</a><a href="mypage.html">마이페이지</a></div></nav>
     </header>
+
     <main id="main-content" class="page-main admin-main">
       <div class="shell">
-        <div class="admin-heading"><p class="eyebrow">ADMINISTRATION · MEMBERS</p><h1>회원 관리</h1><p>회원 정보를 확인하고 이름과 권한을 관리합니다.</p></div>
+        <div class="admin-heading"><p class="eyebrow">ADMINISTRATION · COLLECTION</p><h1>도서 관리</h1><p>도서 요청과 등록, 재고, 정보 수정 및 삭제를 관리합니다.</p></div>
         <p id="admin-page-message" class="form-message" role="alert"></p>
         <div id="admin-content" hidden>
-          <section id="users" class="admin-panel">
-            <div class="admin-panel-heading"><div><p class="eyebrow">MEMBERS</p><h2>유저 관리</h2></div><button id="refresh-users" class="button button-secondary" type="button">새로고침</button></div>
-            <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>아이디</th><th>이름</th><th>이메일</th><th>권한</th><th>가입일</th><th>최근 로그인</th><th>관리</th></tr></thead><tbody id="admin-user-list"></tbody></table></div>
-            <nav id="admin-user-pagination" class="admin-pagination" aria-label="유저 목록 페이지"></nav>
-          </section>
-          <section id="books" class="admin-panel" hidden>
-            <div class="admin-panel-heading"><div><p class="eyebrow">COLLECTION</p><h2>도서 관리</h2></div></div>
+          <section id="books" class="admin-panel admin-panel-first">
+            <div class="admin-panel-heading"><div><p class="eyebrow">COLLECTION</p><h2>등록 도서 목록</h2><p>제목이나 저자로 검색한 뒤 바로 수정하거나 삭제할 수 있습니다.</p></div></div>
+            <form id="admin-book-filter" class="admin-book-filter" role="search">
+              <div class="admin-book-query-field"><label for="admin-book-query">제목·저자 검색</label><input id="admin-book-query" type="search" placeholder="수정하거나 삭제할 책의 제목 또는 저자" autocomplete="off" /></div>
+              <div><label for="admin-book-sort">정렬</label><select id="admin-book-sort"><option value="newest">최근 등록순</option><option value="title">제목순</option><option value="author">저자순</option><option value="category">카테고리순</option><option value="stock-low">재고 적은 순</option><option value="stock-high">재고 많은 순</option></select></div>
+              <button class="button button-primary" type="submit">검색</button>
+              <button id="admin-book-filter-reset" class="button button-secondary" type="button">초기화</button>
+              <p id="admin-book-filter-summary" class="admin-book-filter-summary" aria-live="polite"></p>
+            </form>
+            <div id="admin-book-bulk-toolbar" class="admin-book-bulk-toolbar">
+              <label><input id="admin-book-select-page" type="checkbox" /> 현재 페이지 전체 선택</label><span id="admin-book-selected-count">0권 선택</span><button id="admin-book-clear-selection" class="button button-secondary" type="button" disabled>선택 해제</button><button id="admin-book-delete-selected" class="button button-danger" type="button" disabled>선택 도서 삭제</button>
+            </div>
+            <div id="admin-book-list" class="admin-book-list"></div>
+            <nav id="admin-book-pagination" class="admin-pagination" aria-label="도서 목록 페이지"></nav>
+
+            <div class="admin-section-divider"><span>회원 도서 추가 요청</span></div>
             <section class="admin-request-panel" aria-labelledby="admin-request-title">
-              <div class="admin-panel-heading"><div><p class="eyebrow">MEMBER REQUESTS</p><h3 id="admin-request-title">회원 도서 추가 요청</h3></div><button id="refresh-book-requests" class="button button-secondary" type="button">새로고침</button></div>
+              <div class="admin-panel-heading"><div><p class="eyebrow">MEMBER REQUESTS</p><h2 id="admin-request-title">회원 도서 추가 요청</h2></div><button id="refresh-book-requests" class="button button-secondary" type="button">새로고침</button></div>
               <div id="admin-book-request-list" class="admin-request-list" aria-live="polite"></div>
             </section>
+
             <div class="admin-section-divider"><span>관리자 도서 가져오기</span></div>
             <section class="book-import-panel" aria-labelledby="book-import-title">
-              <div class="book-import-heading">
-                <div><p class="eyebrow">BOOK API</p><h3 id="book-import-title">도서 API에서 가져오기</h3><p>검색한 도서를 선택해 한 번에 등록할 수 있습니다.</p></div>
-              </div>
+              <div class="book-import-heading"><div><p class="eyebrow">BOOK API</p><h2 id="book-import-title">도서 API에서 가져오기</h2><p>검색한 도서를 선택해 한 번에 등록할 수 있습니다.</p></div></div>
               <div class="curated-import-box">
                 <div><strong>관심사별 기본 도서 채우기</strong><p>8개 카테고리에 잘 알려진 도서를 5권씩 카카오 도서 API에서 찾아 등록합니다.</p></div>
-                <div class="curated-import-actions">
-                  <button id="repair-book-categories" class="button button-secondary" type="button">기존 도서 정보 AI 정리</button>
-                  <button id="curated-book-import" class="button button-secondary" type="button">추천 도서 40권 추가</button>
-                </div>
+                <div class="curated-import-actions"><button id="repair-book-categories" class="button button-secondary" type="button">기존 도서 정보 AI 정리</button><button id="curated-book-import" class="button button-secondary" type="button">추천 도서 40권 추가</button></div>
                 <p id="book-category-repair-message" class="form-message" role="status" aria-live="polite"></p>
                 <p id="curated-book-import-message" class="form-message" role="status" aria-live="polite"></p>
               </div>
@@ -71,14 +65,11 @@
               </form>
               <p id="book-import-message" class="form-message" role="alert"></p>
               <div id="book-import-results-wrap" hidden>
-                <div class="book-import-toolbar">
-                  <label><input id="book-import-select-all" type="checkbox" /> 전체 선택</label>
-                  <span id="book-import-result-count"></span>
-                  <button id="book-import-submit" class="button button-primary" type="button">선택 도서 추가</button>
-                </div>
+                <div class="book-import-toolbar"><label><input id="book-import-select-all" type="checkbox" /> 전체 선택</label><span id="book-import-result-count"></span><button id="book-import-submit" class="button button-primary" type="button">선택 도서 추가</button></div>
                 <div id="book-import-results" class="book-import-results"></div>
               </div>
             </section>
+
             <div class="admin-section-divider"><span>직접 도서 추가</span></div>
             <form id="admin-book-form" class="admin-book-form">
               <input name="thumbnail" type="hidden" />
@@ -98,33 +89,17 @@
               <div class="admin-form-actions"><button class="button button-primary" type="submit">도서 추가</button><button id="reset-book-create" class="button button-secondary" type="button">입력 초기화</button></div>
               <p id="admin-book-message" class="form-message admin-form-wide" role="alert"></p>
             </form>
-            <div id="admin-book-bulk-toolbar" class="admin-book-bulk-toolbar">
-              <label><input id="admin-book-select-page" type="checkbox" /> 현재 페이지 전체 선택</label>
-              <span id="admin-book-selected-count">0권 선택</span>
-              <button id="admin-book-clear-selection" class="button button-secondary" type="button" disabled>선택 해제</button>
-              <button id="admin-book-delete-selected" class="button button-danger" type="button" disabled>선택 도서 삭제</button>
-            </div>
-            <div id="admin-book-list" class="admin-book-list"></div>
-            <nav id="admin-book-pagination" class="admin-pagination" aria-label="도서 목록 페이지"></nav>
-          </section>
-          <section id="room-reservations" class="admin-panel" hidden>
-            <div class="admin-panel-heading"><div><p class="eyebrow">READING ROOM</p><h2>열람실 예약 관리</h2><p>예약자와 이용 시간, 선택 좌석을 확인하고 필요한 예약을 취소할 수 있습니다.</p></div><button id="refresh-admin-room-reservations" class="button button-secondary" type="button">새로고침</button></div>
-            <div id="admin-room-reservation-list" class="admin-room-reservation-list" aria-live="polite"></div>
-          </section>
-          <section id="inquiries" class="admin-panel" hidden>
-            <div class="admin-panel-heading"><div><p class="eyebrow">INQUIRIES</p><h2>문의 관리</h2><p>회원의 공개·비밀 문의를 확인하고 답변합니다.</p></div><button id="refresh-admin-inquiries" class="button button-secondary" type="button">새로고침</button></div>
-            <div id="admin-inquiry-list" class="admin-inquiry-list" aria-live="polite"></div>
+
           </section>
         </div>
       </div>
     </main>
+
     <dialog id="book-edit-dialog" class="admin-dialog">
       <div class="admin-dialog-heading"><div><p class="eyebrow">EDIT BOOK</p><h2>도서 정보 수정</h2></div><button id="close-book-edit" class="dialog-close" type="button" aria-label="닫기">×</button></div>
       <p id="admin-book-edit-message" class="form-message dialog-form-message" role="alert" aria-live="assertive"></p>
       <form id="admin-book-edit-form" class="admin-book-form">
-        <input type="hidden" name="originalId" />
-        <input type="hidden" name="originalTotalQuantity" />
-        <input name="thumbnail" type="hidden" />
+        <input type="hidden" name="originalId" /><input type="hidden" name="originalTotalQuantity" /><input name="thumbnail" type="hidden" />
         <div><label for="edit-book-title">제목</label><input id="edit-book-title" name="title" type="text" required /></div>
         <div><label for="edit-book-author">저자</label><input id="edit-book-author" name="author" type="text" required /></div>
         <div><label for="edit-book-publisher">출판사</label><input id="edit-book-publisher" name="publisher" type="text" /></div>

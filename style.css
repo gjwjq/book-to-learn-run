@@ -4523,6 +4523,10 @@ img {
   scroll-margin-top: 150px;
 }
 
+.admin-panel-first {
+  margin-top: 0;
+}
+
 .admin-panel-heading {
   display: flex;
   align-items: center;
@@ -4971,6 +4975,47 @@ img {
 
 .admin-book-list {
   margin-top: 24px;
+}
+
+.admin-book-filter {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(170px, 0.32fr) auto auto;
+  align-items: end;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #ded5cb;
+  border-radius: 12px;
+  background: #faf7f2;
+}
+
+.admin-book-filter label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--brown);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.admin-book-filter input,
+.admin-book-filter select {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid #d2c5b7;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.admin-book-filter .button {
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.admin-book-filter-summary {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #6f665e;
+  font-size: 0.78rem;
 }
 
 .admin-book-bulk-toolbar {
@@ -5784,6 +5829,14 @@ img {
     flex-direction: column;
   }
 
+  .admin-book-filter {
+    grid-template-columns: minmax(0, 1fr) minmax(150px, 0.45fr);
+  }
+
+  .admin-book-filter .button {
+    width: 100%;
+  }
+
   .admin-book-bulk-toolbar span {
     flex: none;
   }
@@ -5915,6 +5968,17 @@ img {
   .admin-book-form {
     gap: 13px;
     padding: 14px;
+  }
+
+  .admin-book-filter {
+    grid-template-columns: 1fr 1fr;
+    padding: 14px;
+  }
+
+  .admin-book-query-field,
+  .admin-book-filter > div:nth-child(2),
+  .admin-book-filter-summary {
+    grid-column: 1 / -1;
   }
 
   .admin-form-actions {

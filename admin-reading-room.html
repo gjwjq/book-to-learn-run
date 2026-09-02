@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="BOOK TO LEARN &amp; RUN 관리자 열람실 관리" />
+    <title>열람실 관리 | BOOK TO LEARN &amp; RUN</title>
+    <link rel="icon" href="image/logo.png" type="image/png" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script><script src="config.js" defer></script><script src="supabase-client.js" defer></script><script src="app.js" defer></script>
+  </head>
+  <body data-page="admin" data-admin-section="room-reservations">
+    <a class="skip-link" href="#main-content">본문 바로가기</a>
+    <header class="site-header"><div class="header-inner"><a class="brand" href="index.html" aria-label="BOOK TO LEARN &amp; RUN 홈"><span class="brand-mark" aria-hidden="true"><span></span></span><span class="brand-copy"><strong>BOOK TO LEARN &amp; RUN</strong><small>PUBLIC LIBRARY SERVICE</small></span></a><form class="header-search" role="search"><label class="sr-only" for="header-search-admin-room">도서 검색</label><input id="header-search-admin-room" name="q" type="search" placeholder="책 제목, 저자, 키워드 검색" /><button type="submit" aria-label="검색"><span aria-hidden="true">⌕</span><span class="search-text">검색</span></button></form><div class="auth-area" data-auth-area></div></div><nav class="main-nav" aria-label="주요 메뉴"><div class="nav-inner"><a href="index.html">홈</a><a href="search.html">도서검색</a><a href="mypage.html">마이페이지</a></div></nav></header>
+    <main id="main-content" class="page-main admin-main"><div class="shell"><div class="admin-heading"><p class="eyebrow">ADMINISTRATION · READING ROOM</p><h1>열람실 관리</h1><p>예약자, 이용 시간과 선택 좌석을 확인하고 예약을 취소합니다.</p></div><p id="admin-page-message" class="form-message" role="alert"></p><div id="admin-content" hidden><section id="room-reservations" class="admin-panel admin-panel-first"><div class="admin-panel-heading"><div><p class="eyebrow">RESERVATIONS</p><h2>열람실 예약 현황</h2><p>현재 예정된 예약을 시간과 좌석별로 확인할 수 있습니다.</p></div><button id="refresh-admin-room-reservations" class="button button-secondary" type="button">새로고침</button></div><div id="admin-room-reservation-list" class="admin-room-reservation-list" aria-live="polite"></div></section></div></div></main>
+    <footer class="site-footer"><div class="shell footer-inner"><div><strong>BOOK TO LEARN &amp; RUN</strong><p>도서 검색부터 예약까지, 일상 가까이의 공공 도서관.</p></div><div class="footer-note"><p>사업자 : Book To Learn&amp;Run</p><p>전화번호 : <a href="tel:010-6314-1491">010-6314-1491</a></p></div></div></footer><div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

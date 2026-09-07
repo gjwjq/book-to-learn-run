@@ -6741,27 +6741,3 @@ img {
     max-height: calc(100vh - 132px);
   }
 }
-
-/* 320px에서도 동적으로 추가되는 모든 주 메뉴가 잘리지 않도록 최종 크기를 고정한다. */
-@media (max-width: 600px) {
-  .nav-inner,
-  .has-admin-nav .nav-inner {
-    justify-content: space-between;
-    gap: 0;
-    overflow-x: auto;
-    padding-inline: 2px;
-  }
-
-  .nav-inner > a {
-    min-width: 0;
-    padding-inline: 3px;
-    font-size: clamp(0.58rem, 2.7vw, 0.68rem);
-    text-align: center;
-    white-space: nowrap;
-  }
-
-  .admin-nav-toggle {
-    padding-inline: 5px;
-    font-size: clamp(0.56rem, 2.5vw, 0.66rem);
-  }
-}
